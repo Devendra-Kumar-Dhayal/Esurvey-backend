@@ -11,6 +11,7 @@ describe('QR Endpoints', () => {
   let testUser;
   let testProject;
   let testWayBridge;
+  let testTransporter;
 
   const createUserAndLogin = async () => {
     testUser = await User.create({
@@ -37,6 +38,12 @@ describe('QR Endpoints', () => {
       type: 'way_bridge',
       name: 'Test Way Bridge',
       code: 'WB001',
+    });
+
+    testTransporter = await DropdownOption.create({
+      type: 'transporter',
+      name: 'Test Transporter',
+      code: 'TR001',
     });
   };
 
@@ -101,15 +108,18 @@ describe('QR Endpoints', () => {
         .send({
           qrCode: 'NEW_QR',
           vehicleNumber: 'xyz789',
+          transporterId: testTransporter._id.toString(),
         });
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.data.vehicleNumber).toBe('XYZ789'); // uppercase
+      expect(res.body.data.transporterName).toBe('Test Transporter');
 
       const qrVehicle = await QRVehicle.findOne({ qrCode: 'NEW_QR' });
       expect(qrVehicle).not.toBeNull();
       expect(qrVehicle.vehicleNumber).toBe('XYZ789');
+      expect(qrVehicle.transporterName).toBe('Test Transporter');
     });
 
     it('should update existing QR-vehicle association', async () => {
@@ -124,6 +134,7 @@ describe('QR Endpoints', () => {
         .send({
           qrCode: 'EXISTING_QR',
           vehicleNumber: 'new456',
+          transporterId: testTransporter._id.toString(),
         });
 
       expect(res.status).toBe(200);
@@ -141,6 +152,37 @@ describe('QR Endpoints', () => {
 
       expect(res.status).toBe(400);
       expect(res.body.errors).toBeDefined();
+    });
+
+    it('should validate transporter is required', async () => {
+      const res = await request(app)
+        .post('/api/qr/associate')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({ qrCode: 'TEST', vehicleNumber: 'ABC123' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.errors).toBeDefined();
+    });
+  });
+
+  describe('GET /api/qr/transporters', () => {
+    it('should return list of transporters', async () => {
+      const res = await request(app)
+        .get('/api/qr/transporters')
+        .set('Authorization', `Bearer ${userToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.transporters).toBeDefined();
+      expect(res.body.data.transporters.length).toBeGreaterThan(0);
+      expect(res.body.data.transporters[0].name).toBe('Test Transporter');
+    });
+
+    it('should require authentication', async () => {
+      const res = await request(app)
+        .get('/api/qr/transporters');
+
+      expect(res.status).toBe(401);
     });
   });
 

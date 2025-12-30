@@ -345,6 +345,7 @@ const getAllDropdownOptions = async (req, res) => {
       wayBridges: options.filter((o) => o.type === 'way_bridge'),
       loadingPoints: options.filter((o) => o.type === 'loading_point'),
       unloadingPoints: options.filter((o) => o.type === 'unloading_point'),
+      transporters: options.filter((o) => o.type === 'transporter'),
     };
 
     sendSuccess(res, { options, grouped }, 'Dropdown options retrieved successfully');

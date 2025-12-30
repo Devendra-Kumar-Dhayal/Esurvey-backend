@@ -485,7 +485,8 @@ function renderOptionsTable() {
     'project': 'projects',
     'way_bridge': 'wayBridges',
     'loading_point': 'loadingPoints',
-    'unloading_point': 'unloadingPoints'
+    'unloading_point': 'unloadingPoints',
+    'transporter': 'transporters'
   };
 
   const groupKey = typeMap[currentOptionType];
@@ -532,7 +533,8 @@ function getTypeDisplayName(type) {
     'project': 'Project',
     'way_bridge': 'Way Bridge',
     'loading_point': 'Loading Point',
-    'unloading_point': 'Unloading Point'
+    'unloading_point': 'Unloading Point',
+    'transporter': 'Transporter'
   };
   return names[type] || type;
 }

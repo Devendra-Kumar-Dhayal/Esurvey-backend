@@ -88,8 +88,8 @@ const updateRoleValidation = [
 
 const createDropdownOptionValidation = [
   body('type')
-    .isIn(['project', 'way_bridge', 'loading_point', 'unloading_point'])
-    .withMessage('Type must be project, way_bridge, loading_point, or unloading_point'),
+    .isIn(['project', 'way_bridge', 'loading_point', 'unloading_point', 'transporter'])
+    .withMessage('Type must be project, way_bridge, loading_point, unloading_point, or transporter'),
   body('name').trim().notEmpty().withMessage('Name is required'),
   body('code').optional().trim(),
   body('order').optional().isInt({ min: 0 }).withMessage('Order must be a non-negative integer'),

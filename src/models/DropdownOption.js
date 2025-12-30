@@ -5,7 +5,7 @@ const dropdownOptionSchema = new mongoose.Schema(
     type: {
       type: String,
       required: true,
-      enum: ['project', 'way_bridge', 'loading_point', 'unloading_point'],
+      enum: ['project', 'way_bridge', 'loading_point', 'unloading_point', 'transporter'],
       index: true,
     },
     name: {
@@ -38,11 +38,12 @@ dropdownOptionSchema.statics.getOptionsByType = function (type) {
 };
 
 dropdownOptionSchema.statics.getAllOptions = async function () {
-  const [projects, wayBridges, loadingPoints, unloadingPoints] = await Promise.all([
+  const [projects, wayBridges, loadingPoints, unloadingPoints, transporters] = await Promise.all([
     this.getOptionsByType('project'),
     this.getOptionsByType('way_bridge'),
     this.getOptionsByType('loading_point'),
     this.getOptionsByType('unloading_point'),
+    this.getOptionsByType('transporter'),
   ]);
 
   return {
@@ -50,6 +51,7 @@ dropdownOptionSchema.statics.getAllOptions = async function () {
     wayBridges,
     loadingPoints,
     unloadingPoints,
+    transporters,
   };
 };
 

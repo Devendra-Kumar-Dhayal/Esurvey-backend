@@ -15,6 +15,16 @@ const qrVehicleSchema = new mongoose.Schema(
       uppercase: true,
       default: null,
     },
+    transporterId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'DropdownOption',
+      default: null,
+    },
+    transporterName: {
+      type: String,
+      trim: true,
+      default: null,
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
