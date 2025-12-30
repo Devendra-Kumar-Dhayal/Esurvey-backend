@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - Background Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Login Page -->
+  <div id="login-page" class="page">
+    <div class="login-container">
+      <h1>Admin Panel</h1>
+      <p class="subtitle">Background Tracker Management</p>
+      <form id="login-form">
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" required placeholder="admin@example.com">
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" required placeholder="Enter password">
+        </div>
+        <button type="submit" class="btn btn-primary">Login</button>
+        <p id="login-error" class="error-message"></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- Dashboard Page -->
+  <div id="dashboard-page" class="page hidden">
+    <nav class="navbar">
+      <div class="nav-brand">Admin Panel</div>
+      <div class="nav-user">
+        <span id="admin-name"></span>
+        <button id="logout-btn" class="btn btn-secondary">Logout</button>
+      </div>
+    </nav>
+
+    <div class="container">
+      <div class="sidebar">
+        <ul class="nav-menu">
+          <li><a href="#" class="nav-link active" data-section="dashboard">Dashboard</a></li>
+          <li><a href="#" class="nav-link" data-section="open-trips">Open Trips</a></li>
+          <li><a href="#" class="nav-link" data-section="suspicious-entries">Suspicious Entries</a></li>
+          <li><a href="#" class="nav-link" data-section="users">Users</a></li>
+          <li><a href="#" class="nav-link" data-section="roles">Roles</a></li>
+          <li><a href="#" class="nav-link" data-section="dropdown-options">Dropdown Options</a></li>
+        </ul>
+      </div>
+
+      <main class="main-content">
+        <!-- Dashboard Section -->
+        <section id="dashboard-section" class="section">
+          <h2>Dashboard</h2>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <h3>Total Users</h3>
+              <p id="stat-total-users" class="stat-value">-</p>
+            </div>
+            <div class="stat-card">
+              <h3>Active Users</h3>
+              <p id="stat-active-users" class="stat-value">-</p>
+            </div>
+            <div class="stat-card">
+              <h3>Inactive Users</h3>
+              <p id="stat-inactive-users" class="stat-value">-</p>
+            </div>
+            <div class="stat-card">
+              <h3>Total Locations</h3>
+              <p id="stat-total-locations" class="stat-value">-</p>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Recent Users</h3>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                </tr>
+              </thead>
+              <tbody id="recent-users-table"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Open Trips Section -->
+        <section id="open-trips-section" class="section hidden">
+          <h2>Open Trips</h2>
+          <div class="stats-grid" style="margin-bottom: 20px;">
+            <div class="stat-card">
+              <h3>Active Trips</h3>
+              <p id="stat-active-trips" class="stat-value">-</p>
+            </div>
+          </div>
+          <div class="search-bar">
+            <select id="trip-status-filter">
+              <option value="active">Active Only</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+              <option value="all">All Trips</option>
+            </select>
+            <button id="refresh-trips-btn" class="btn btn-primary">Refresh</button>
+          </div>
+          <div class="card">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Vehicle</th>
+                  <th>User</th>
+                  <th>Project</th>
+                  <th>Selection</th>
+                  <th>Start Time</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="trips-table"></tbody>
+            </table>
+            <div class="pagination">
+              <button id="prev-trips-page" class="btn btn-secondary" disabled>Previous</button>
+              <span id="trips-page-info">Page 1</span>
+              <button id="next-trips-page" class="btn btn-secondary">Next</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Suspicious Entries Section -->
+        <section id="suspicious-entries-section" class="section hidden">
+          <h2>Suspicious Entries</h2>
+          <p class="section-description">Entries logged when data is missing or trips were not properly ended.</p>
+          <div class="stats-grid" style="margin-bottom: 20px;">
+            <div class="stat-card">
+              <h3>Missing Loading</h3>
+              <p id="stat-missing-loading" class="stat-value">-</p>
+            </div>
+            <div class="stat-card">
+              <h3>Missing Unloading</h3>
+              <p id="stat-missing-unloading" class="stat-value">-</p>
+            </div>
+            <div class="stat-card">
+              <h3>Total Suspicious</h3>
+              <p id="stat-total-suspicious" class="stat-value">-</p>
+            </div>
+          </div>
+          <div class="search-bar">
+            <select id="suspicious-type-filter">
+              <option value="all">All Types</option>
+              <option value="loading">Missing Loading Point</option>
+              <option value="unloading">Missing Unloading Point</option>
+            </select>
+            <button id="refresh-suspicious-btn" class="btn btn-primary">Refresh</button>
+          </div>
+          <div class="card">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Vehicle</th>
+                  <th>User</th>
+                  <th>Project</th>
+                  <th>Reason</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody id="suspicious-entries-table"></tbody>
+            </table>
+            <div class="pagination">
+              <button id="prev-suspicious-page" class="btn btn-secondary" disabled>Previous</button>
+              <span id="suspicious-page-info">Page 1</span>
+              <button id="next-suspicious-page" class="btn btn-secondary">Next</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Users Section -->
+        <section id="users-section" class="section hidden">
+          <div class="section-title-row">
+            <h2>User Management</h2>
+            <button id="create-user-btn" class="btn btn-primary">Create New User</button>
+          </div>
+          <div class="search-bar">
+            <input type="text" id="user-search" placeholder="Search users...">
+            <select id="role-filter">
+              <option value="">All Roles</option>
+            </select>
+            <button id="search-btn" class="btn btn-primary">Search</button>
+          </div>
+          <div class="card">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Last Login</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="users-table"></tbody>
+            </table>
+            <div class="pagination">
+              <button id="prev-page" class="btn btn-secondary" disabled>Previous</button>
+              <span id="page-info">Page 1</span>
+              <button id="next-page" class="btn btn-secondary">Next</button>
+            </div>
+          </div>
+        </section>
+
+        
+        <!-- Roles Section -->
+        <section id="roles-section" class="section hidden">
+          <h2>Role Management</h2>
+          <div class="card">
+            <div class="section-header">
+              <button id="create-role-btn" class="btn btn-primary">Create New Role</button>
+            </div>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Description</th>
+                  <th>Permissions</th>
+                  <th>Users</th>
+                  <th>Default</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="roles-table"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Dropdown Options Section -->
+        <section id="dropdown-options-section" class="section hidden">
+          <h2>Dropdown Options Management</h2>
+          <p class="section-description">Manage the dropdown options that appear in the mobile app for projects, way bridges, loading points, and unloading points.</p>
+
+          <div class="tabs">
+            <button class="tab-btn active" data-tab="projects">Projects</button>
+            <button class="tab-btn" data-tab="way_bridge">Way Bridges</button>
+            <button class="tab-btn" data-tab="loading_point">Loading Points</button>
+            <button class="tab-btn" data-tab="wb_loading_point">WB Loading Points</button>
+            <button class="tab-btn" data-tab="unloading_point">Unloading Points</button>
+            <button class="tab-btn" data-tab="transporter">Transporters</button>
+          </div>
+
+          <div class="card">
+            <div class="section-header">
+              <button id="create-option-btn" class="btn btn-primary">Add New Option</button>
+            </div>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Order</th>
+                  <th>Name</th>
+                  <th>Code</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="options-table"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- Create User Modal -->
+  <div id="create-user-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Create New User</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="create-user-form">
+        <div class="form-group">
+          <label for="new-user-name">Name</label>
+          <input type="text" id="new-user-name" required placeholder="Enter full name">
+        </div>
+        <div class="form-group">
+          <label for="new-user-email">Email</label>
+          <input type="email" id="new-user-email" required placeholder="Enter email address">
+        </div>
+        <div class="form-group">
+          <label for="new-user-password">Password</label>
+          <input type="password" id="new-user-password" required minlength="6" placeholder="Enter password (min 6 chars)">
+        </div>
+        <div class="form-group">
+          <label for="new-user-role">Role</label>
+          <select id="new-user-role">
+            <option value="">No Role</option>
+          </select>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Create User</button>
+          <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit User Modal -->
+  <div id="edit-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Edit User</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="edit-user-form">
+        <input type="hidden" id="edit-user-id">
+        <div class="form-group">
+          <label for="edit-user-name">Name</label>
+          <input type="text" id="edit-user-name" required>
+        </div>
+        <div class="form-group">
+          <label for="edit-user-email">Email</label>
+          <input type="email" id="edit-user-email" required>
+        </div>
+        <div class="form-group">
+          <label for="edit-user-role">Role</label>
+          <select id="edit-user-role">
+            <option value="">No Role</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="edit-user-active">
+            Active
+          </label>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+          <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Reset Password Modal -->
+  <div id="reset-password-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Reset Password</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="reset-password-form">
+        <input type="hidden" id="reset-user-id">
+        <div class="form-group">
+          <label for="new-password">New Password</label>
+          <input type="password" id="new-password" required minlength="6" placeholder="Enter new password">
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Reset Password</button>
+          <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Role Modal -->
+  <div id="role-modal" class="modal hidden">
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <h3 id="role-modal-title">Create Role</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="role-form">
+        <input type="hidden" id="role-id">
+        <div class="form-group">
+          <label for="role-name">Role Name</label>
+          <input type="text" id="role-name" required placeholder="e.g., Manager, Viewer">
+        </div>
+        <div class="form-group">
+          <label for="role-description">Description</label>
+          <input type="text" id="role-description" placeholder="Brief description of this role">
+        </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="role-default">
+            Set as default role for new users
+          </label>
+        </div>
+        <div class="form-group">
+          <label>Permissions</label>
+          <div id="permissions-container" class="permissions-grid"></div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Save Role</button>
+          <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Dropdown Option Modal -->
+  <div id="option-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="option-modal-title">Add Option</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="option-form">
+        <input type="hidden" id="option-id">
+        <input type="hidden" id="option-type">
+        <div class="form-group">
+          <label for="option-name">Name</label>
+          <input type="text" id="option-name" required placeholder="Enter option name">
+        </div>
+        <div class="form-group">
+          <label for="option-code">Code (Optional)</label>
+          <input type="text" id="option-code" placeholder="e.g., PRJ001, WB001">
+        </div>
+        <div class="form-group">
+          <label for="option-order">Display Order</label>
+          <input type="number" id="option-order" min="0" value="0" placeholder="0">
+        </div>
+        <div class="form-group" id="option-active-group" style="display: none;">
+          <label>
+            <input type="checkbox" id="option-active" checked>
+            Active
+          </label>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Save Option</button>
+          <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
