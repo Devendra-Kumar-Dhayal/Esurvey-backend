@@ -1,6 +1,7 @@
-const Admin = require('../models/Admin');
 const User = require('../models/User');
 const Location = require('../models/Location');
+const Role = require('../models/Role');
+const DropdownOption = require('../models/DropdownOption');
 const { generateAdminToken } = require('../middleware/admin.middleware');
 const { sendSuccess, sendError, sendPaginated } = require('../utils/response');
 
@@ -9,27 +10,31 @@ const adminLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const admin = await Admin.findOne({ email }).select('+password');
-    if (!admin) {
+    const user = await User.findOne({ email }).select('+password').populate('role');
+    if (!user) {
       return sendError(res, 'Invalid credentials', 401);
     }
 
-    if (!admin.isActive) {
+    if (!user.isAdmin) {
+      return sendError(res, 'Admin access required', 401);
+    }
+
+    if (!user.isActive) {
       return sendError(res, 'Account is deactivated', 401);
     }
 
-    const isMatch = await admin.comparePassword(password);
+    const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       return sendError(res, 'Invalid credentials', 401);
     }
 
-    admin.lastLogin = new Date();
-    await admin.save();
+    user.lastLogin = new Date();
+    await user.save();
 
-    const token = generateAdminToken(admin._id);
+    const token = generateAdminToken(user._id);
 
     sendSuccess(res, {
-      admin: admin.toJSON(),
+      admin: user.toJSON(),
       token,
     }, 'Login successful');
   } catch (error) {
@@ -50,14 +55,29 @@ const getAdminProfile = async (req, res) => {
 // User Management
 const createUser = async (req, res) => {
   try {
-    const { email, password, name } = req.body;
+    const { email, password, name, role } = req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return sendError(res, 'User with this email already exists', 400);
     }
 
-    const user = await User.create({ email, password, name });
+    let roleId = null;
+    if (role) {
+      const roleDoc = await Role.findById(role);
+      if (!roleDoc) {
+        return sendError(res, 'Invalid role specified', 400);
+      }
+      roleId = roleDoc._id;
+    } else {
+      const defaultRole = await Role.findOne({ isDefault: true });
+      if (defaultRole) {
+        roleId = defaultRole._id;
+      }
+    }
+
+    const user = await User.create({ email, password, name, role: roleId });
+    await user.populate('role');
 
     sendSuccess(res, { user: user.toJSON() }, 'User created successfully', 201);
   } catch (error) {
@@ -68,7 +88,7 @@ const createUser = async (req, res) => {
 
 const getAllUsers = async (req, res) => {
   try {
-    const { limit = 20, skip = 0, search, isActive } = req.query;
+    const { limit = 20, skip = 0, search, isActive, role } = req.query;
 
     const query = {};
     if (search) {
@@ -80,8 +100,12 @@ const getAllUsers = async (req, res) => {
     if (isActive !== undefined) {
       query.isActive = isActive === 'true';
     }
+    if (role) {
+      query.role = role;
+    }
 
     const users = await User.find(query)
+      .populate('role', 'name permissions')
       .sort({ createdAt: -1 })
       .skip(parseInt(skip, 10))
       .limit(parseInt(limit, 10))
@@ -110,7 +134,7 @@ const getUserById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const user = await User.findById(id).lean();
+    const user = await User.findById(id).populate('role').lean();
     if (!user) {
       return sendError(res, 'User not found', 404);
     }
@@ -136,7 +160,7 @@ const getUserById = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, isActive } = req.body;
+    const { name, email, isActive, role } = req.body;
 
     const user = await User.findById(id);
     if (!user) {
@@ -154,7 +178,20 @@ const updateUser = async (req, res) => {
     if (name) user.name = name;
     if (isActive !== undefined) user.isActive = isActive;
 
+    if (role !== undefined) {
+      if (role === null || role === '') {
+        user.role = null;
+      } else {
+        const roleDoc = await Role.findById(role);
+        if (!roleDoc) {
+          return sendError(res, 'Invalid role specified', 400);
+        }
+        user.role = roleDoc._id;
+      }
+    }
+
     await user.save();
+    await user.populate('role');
 
     sendSuccess(res, { user: user.toJSON() }, 'User updated successfully');
   } catch (error) {
@@ -239,19 +276,159 @@ const getDashboardStats = async (req, res) => {
 // Admin Management (Superadmin only)
 const createAdmin = async (req, res) => {
   try {
-    const { email, password, name, role = 'admin' } = req.body;
+    const { email, password, name, role } = req.body;
 
-    const existingAdmin = await Admin.findOne({ email });
-    if (existingAdmin) {
-      return sendError(res, 'Admin with this email already exists', 400);
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return sendError(res, 'User with this email already exists', 400);
     }
 
-    const admin = await Admin.create({ email, password, name, role });
+    let roleId = null;
+    if (role) {
+      const roleDoc = await Role.findById(role);
+      if (!roleDoc) {
+        return sendError(res, 'Invalid role specified', 400);
+      }
+      roleId = roleDoc._id;
+    } else {
+      // Default to Admin role if not specified
+      const adminRole = await Role.findOne({ name: { $regex: /^admin$/i } });
+      if (adminRole) {
+        roleId = adminRole._id;
+      }
+    }
+
+    const admin = await User.create({
+      email,
+      password,
+      name,
+      role: roleId,
+      isAdmin: true,
+    });
+    await admin.populate('role');
 
     sendSuccess(res, { admin: admin.toJSON() }, 'Admin created successfully', 201);
   } catch (error) {
     console.error('Create admin error:', error);
     sendError(res, 'Failed to create admin', 500);
+  }
+};
+
+// Dropdown Options Management
+const createDropdownOption = async (req, res) => {
+  try {
+    const { type, name, code, order } = req.body;
+
+    const option = await DropdownOption.create({ type, name, code, order });
+
+    sendSuccess(res, { option }, 'Dropdown option created successfully', 201);
+  } catch (error) {
+    console.error('Create dropdown option error:', error);
+    sendError(res, 'Failed to create dropdown option', 500);
+  }
+};
+
+const getAllDropdownOptions = async (req, res) => {
+  try {
+    const { type, isActive } = req.query;
+
+    const query = {};
+    if (type) query.type = type;
+    if (isActive !== undefined) query.isActive = isActive === 'true';
+
+    const options = await DropdownOption.find(query)
+      .sort({ type: 1, order: 1, name: 1 })
+      .lean();
+
+    const grouped = {
+      projects: options.filter((o) => o.type === 'project'),
+      wayBridges: options.filter((o) => o.type === 'way_bridge'),
+      loadingPoints: options.filter((o) => o.type === 'loading_point'),
+      unloadingPoints: options.filter((o) => o.type === 'unloading_point'),
+    };
+
+    sendSuccess(res, { options, grouped }, 'Dropdown options retrieved successfully');
+  } catch (error) {
+    console.error('Get dropdown options error:', error);
+    sendError(res, 'Failed to get dropdown options', 500);
+  }
+};
+
+const getDropdownOptionById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const option = await DropdownOption.findById(id).lean();
+    if (!option) {
+      return sendError(res, 'Dropdown option not found', 404);
+    }
+
+    sendSuccess(res, { option }, 'Dropdown option retrieved successfully');
+  } catch (error) {
+    console.error('Get dropdown option error:', error);
+    sendError(res, 'Failed to get dropdown option', 500);
+  }
+};
+
+const updateDropdownOption = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, code, order, isActive } = req.body;
+
+    const option = await DropdownOption.findById(id);
+    if (!option) {
+      return sendError(res, 'Dropdown option not found', 404);
+    }
+
+    if (name !== undefined) option.name = name;
+    if (code !== undefined) option.code = code;
+    if (order !== undefined) option.order = order;
+    if (isActive !== undefined) option.isActive = isActive;
+
+    await option.save();
+
+    sendSuccess(res, { option }, 'Dropdown option updated successfully');
+  } catch (error) {
+    console.error('Update dropdown option error:', error);
+    sendError(res, 'Failed to update dropdown option', 500);
+  }
+};
+
+const deleteDropdownOption = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const option = await DropdownOption.findById(id);
+    if (!option) {
+      return sendError(res, 'Dropdown option not found', 404);
+    }
+
+    await DropdownOption.findByIdAndDelete(id);
+
+    sendSuccess(res, { message: 'Dropdown option deleted successfully' }, 'Dropdown option deleted successfully');
+  } catch (error) {
+    console.error('Delete dropdown option error:', error);
+    sendError(res, 'Failed to delete dropdown option', 500);
+  }
+};
+
+const reorderDropdownOptions = async (req, res) => {
+  try {
+    const { options } = req.body;
+
+    const bulkOps = options.map((item) => ({
+      updateOne: {
+        filter: { _id: item.id },
+        update: { $set: { order: item.order } },
+      },
+    }));
+
+    await DropdownOption.bulkWrite(bulkOps);
+
+    sendSuccess(res, { message: 'Options reordered successfully' }, 'Options reordered successfully');
+  } catch (error) {
+    console.error('Reorder dropdown options error:', error);
+    sendError(res, 'Failed to reorder options', 500);
   }
 };
 
@@ -266,4 +443,10 @@ module.exports = {
   deleteUser,
   getDashboardStats,
   createAdmin,
+  createDropdownOption,
+  getAllDropdownOptions,
+  getDropdownOptionById,
+  updateDropdownOption,
+  deleteDropdownOption,
+  reorderDropdownOptions,
 };

@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const DropdownOption = require('../models/DropdownOption');
 const { generateToken } = require('../middleware/auth.middleware');
 const { sendSuccess, sendError } = require('../utils/response');
 
@@ -13,12 +14,14 @@ const register = async (req, res) => {
 
     const user = await User.create({ email, password, name });
     const token = generateToken(user._id);
+    const dropdownOptions = await DropdownOption.getAllOptions();
 
     sendSuccess(
       res,
       {
         user: user.toJSON(),
         token,
+        dropdownOptions,
       },
       'User registered successfully',
       201
@@ -51,10 +54,12 @@ const login = async (req, res) => {
     await user.save();
 
     const token = generateToken(user._id);
+    const dropdownOptions = await DropdownOption.getAllOptions();
 
     sendSuccess(res, {
       user: user.toJSON(),
       token,
+      dropdownOptions,
     }, 'Login successful');
   } catch (error) {
     console.error('Login error:', error);

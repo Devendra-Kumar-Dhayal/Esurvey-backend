@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const Admin = require('../models/Admin');
+const User = require('../models/User');
 const { sendError } = require('../utils/response');
 
 const protectAdmin = async (req, res, next) => {
@@ -20,16 +20,20 @@ const protectAdmin = async (req, res, next) => {
       return sendError(res, 'Not authorized as admin', 401);
     }
 
-    const admin = await Admin.findById(decoded.id);
-    if (!admin) {
-      return sendError(res, 'Admin not found', 401);
+    const user = await User.findById(decoded.id).populate('role');
+    if (!user) {
+      return sendError(res, 'User not found', 401);
     }
 
-    if (!admin.isActive) {
-      return sendError(res, 'Admin account is deactivated', 401);
+    if (!user.isAdmin) {
+      return sendError(res, 'Admin access required', 401);
     }
 
-    req.admin = admin;
+    if (!user.isActive) {
+      return sendError(res, 'Account is deactivated', 401);
+    }
+
+    req.admin = user;
     next();
   } catch (error) {
     if (error.name === 'JsonWebTokenError') {
@@ -43,14 +47,15 @@ const protectAdmin = async (req, res, next) => {
 };
 
 const requireSuperAdmin = (req, res, next) => {
-  if (req.admin.role !== 'superadmin') {
+  const roleName = req.admin.role?.name?.toLowerCase();
+  if (roleName !== 'super admin' && roleName !== 'superadmin') {
     return sendError(res, 'Superadmin access required', 403);
   }
   next();
 };
 
-const generateAdminToken = (adminId) => {
-  return jwt.sign({ id: adminId, type: 'admin' }, process.env.JWT_SECRET, {
+const generateAdminToken = (userId) => {
+  return jwt.sign({ id: userId, type: 'admin' }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
   });
 };

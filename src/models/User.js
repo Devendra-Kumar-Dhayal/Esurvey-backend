@@ -23,6 +23,15 @@ const userSchema = new mongoose.Schema(
       trim: true,
       maxlength: [100, 'Name cannot exceed 100 characters'],
     },
+    role: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Role',
+      default: null,
+    },
+    isAdmin: {
+      type: Boolean,
+      default: false,
+    },
     isActive: {
       type: Boolean,
       default: true,
@@ -54,6 +63,18 @@ userSchema.methods.toJSON = function () {
   delete user.password;
   delete user.__v;
   return user;
+};
+
+userSchema.methods.hasPermission = async function (permission) {
+  if (!this.role) return false;
+  await this.populate('role');
+  return this.role && this.role.hasPermission(permission);
+};
+
+userSchema.methods.getPermissions = async function () {
+  if (!this.role) return [];
+  await this.populate('role');
+  return this.role ? this.role.permissions : [];
 };
 
 module.exports = mongoose.model('User', userSchema);

@@ -43,6 +43,8 @@
           <li><a href="#" class="nav-link active" data-section="dashboard">Dashboard</a></li>
           <li><a href="#" class="nav-link" data-section="users">Users</a></li>
           <li><a href="#" class="nav-link" data-section="create-user">Create User</a></li>
+          <li><a href="#" class="nav-link" data-section="roles">Roles</a></li>
+          <li><a href="#" class="nav-link" data-section="dropdown-options">Dropdown Options</a></li>
         </ul>
       </div>
 
@@ -89,6 +91,9 @@
           <h2>User Management</h2>
           <div class="search-bar">
             <input type="text" id="user-search" placeholder="Search users...">
+            <select id="role-filter">
+              <option value="">All Roles</option>
+            </select>
             <button id="search-btn" class="btn btn-primary">Search</button>
           </div>
           <div class="card">
@@ -97,6 +102,7 @@
                 <tr>
                   <th>Name</th>
                   <th>Email</th>
+                  <th>Role</th>
                   <th>Status</th>
                   <th>Last Login</th>
                   <th>Actions</th>
@@ -129,9 +135,69 @@
                 <label for="new-user-password">Password</label>
                 <input type="password" id="new-user-password" required minlength="6" placeholder="Enter password (min 6 chars)">
               </div>
+              <div class="form-group">
+                <label for="new-user-role">Role</label>
+                <select id="new-user-role">
+                  <option value="">No Role</option>
+                </select>
+              </div>
               <button type="submit" class="btn btn-primary">Create User</button>
               <p id="create-user-message" class="message"></p>
             </form>
+          </div>
+        </section>
+
+        <!-- Roles Section -->
+        <section id="roles-section" class="section hidden">
+          <h2>Role Management</h2>
+          <div class="card">
+            <div class="section-header">
+              <button id="create-role-btn" class="btn btn-primary">Create New Role</button>
+            </div>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Description</th>
+                  <th>Permissions</th>
+                  <th>Users</th>
+                  <th>Default</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="roles-table"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Dropdown Options Section -->
+        <section id="dropdown-options-section" class="section hidden">
+          <h2>Dropdown Options Management</h2>
+          <p class="section-description">Manage the dropdown options that appear in the mobile app for projects, way bridges, loading points, and unloading points.</p>
+
+          <div class="tabs">
+            <button class="tab-btn active" data-tab="projects">Projects</button>
+            <button class="tab-btn" data-tab="way_bridge">Way Bridges</button>
+            <button class="tab-btn" data-tab="loading_point">Loading Points</button>
+            <button class="tab-btn" data-tab="unloading_point">Unloading Points</button>
+          </div>
+
+          <div class="card">
+            <div class="section-header">
+              <button id="create-option-btn" class="btn btn-primary">Add New Option</button>
+            </div>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Order</th>
+                  <th>Name</th>
+                  <th>Code</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="options-table"></tbody>
+            </table>
           </div>
         </section>
       </main>
@@ -154,6 +220,12 @@
         <div class="form-group">
           <label for="edit-user-email">Email</label>
           <input type="email" id="edit-user-email" required>
+        </div>
+        <div class="form-group">
+          <label for="edit-user-role">Role</label>
+          <select id="edit-user-role">
+            <option value="">No Role</option>
+          </select>
         </div>
         <div class="form-group">
           <label>
@@ -184,6 +256,77 @@
         </div>
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">Reset Password</button>
+          <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Role Modal -->
+  <div id="role-modal" class="modal hidden">
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <h3 id="role-modal-title">Create Role</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="role-form">
+        <input type="hidden" id="role-id">
+        <div class="form-group">
+          <label for="role-name">Role Name</label>
+          <input type="text" id="role-name" required placeholder="e.g., Manager, Viewer">
+        </div>
+        <div class="form-group">
+          <label for="role-description">Description</label>
+          <input type="text" id="role-description" placeholder="Brief description of this role">
+        </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="role-default">
+            Set as default role for new users
+          </label>
+        </div>
+        <div class="form-group">
+          <label>Permissions</label>
+          <div id="permissions-container" class="permissions-grid"></div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Save Role</button>
+          <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Dropdown Option Modal -->
+  <div id="option-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="option-modal-title">Add Option</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="option-form">
+        <input type="hidden" id="option-id">
+        <input type="hidden" id="option-type">
+        <div class="form-group">
+          <label for="option-name">Name</label>
+          <input type="text" id="option-name" required placeholder="Enter option name">
+        </div>
+        <div class="form-group">
+          <label for="option-code">Code (Optional)</label>
+          <input type="text" id="option-code" placeholder="e.g., PRJ001, WB001">
+        </div>
+        <div class="form-group">
+          <label for="option-order">Display Order</label>
+          <input type="number" id="option-order" min="0" value="0" placeholder="0">
+        </div>
+        <div class="form-group" id="option-active-group" style="display: none;">
+          <label>
+            <input type="checkbox" id="option-active" checked>
+            Active
+          </label>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Save Option</button>
           <button type="button" class="btn btn-secondary modal-close">Cancel</button>
         </div>
       </form>

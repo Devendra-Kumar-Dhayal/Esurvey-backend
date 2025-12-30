@@ -7,6 +7,8 @@ const { connectDB } = require('./config/database');
 const authRoutes = require('./routes/auth.routes');
 const telemetryRoutes = require('./routes/telemetry.routes');
 const adminRoutes = require('./routes/admin.routes');
+const selectionRoutes = require('./routes/selection.routes');
+const qrRoutes = require('./routes/qr.routes');
 const { sendError } = require('./utils/response');
 
 const app = express();
@@ -25,6 +27,8 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/telemetry', telemetryRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/selection', selectionRoutes);
+app.use('/api/qr', qrRoutes);
 
 app.use((req, res) => {
   sendError(res, 'Route not found', 404);

@@ -336,6 +336,12 @@ body {
   width: 100%;
   max-width: 500px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-content.modal-large {
+  max-width: 700px;
 }
 
 .modal-header {
@@ -410,4 +416,159 @@ body {
   .stats-grid {
     grid-template-columns: 1fr 1fr;
   }
+}
+
+/* Section Header */
+.section-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
+/* Permissions Grid */
+.permissions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+  padding: 12px;
+  background: #f5f6fa;
+  border-radius: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.permission-category {
+  margin-bottom: 12px;
+}
+
+.permission-category-title {
+  font-weight: 600;
+  color: #2d3436;
+  margin-bottom: 8px;
+  text-transform: capitalize;
+}
+
+.permission-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.permission-item label {
+  cursor: pointer;
+  font-size: 14px;
+  color: #636e72;
+}
+
+.permission-item input[type="checkbox"] {
+  cursor: pointer;
+}
+
+/* Role Badge */
+.role-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  background: #74b9ff;
+  color: #0984e3;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.role-badge.no-role {
+  background: #dfe6e9;
+  color: #636e72;
+}
+
+/* Default Badge */
+.default-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #00b89433;
+  color: #00b894;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* Filter Select */
+#role-filter {
+  padding: 12px 16px;
+  border: 2px solid #dfe6e9;
+  border-radius: 8px;
+  font-size: 16px;
+  min-width: 150px;
+}
+
+#role-filter:focus {
+  outline: none;
+  border-color: #0984e3;
+}
+
+/* Section Description */
+.section-description {
+  color: #636e72;
+  margin-bottom: 24px;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  border-bottom: 2px solid #dfe6e9;
+  padding-bottom: 12px;
+}
+
+.tab-btn {
+  padding: 10px 20px;
+  border: none;
+  background: #f5f6fa;
+  color: #636e72;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.tab-btn:hover {
+  background: #dfe6e9;
+}
+
+.tab-btn.active {
+  background: #0984e3;
+  color: white;
+}
+
+/* Number Input */
+.form-group input[type="number"] {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #dfe6e9;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: border-color 0.3s;
+}
+
+.form-group input[type="number"]:focus {
+  outline: none;
+  border-color: #0984e3;
+}
+
+/* Select Input */
+.form-group select {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #dfe6e9;
+  border-radius: 8px;
+  font-size: 16px;
+  background: white;
+  cursor: pointer;
+}
+
+.form-group select:focus {
+  outline: none;
+  border-color: #0984e3;
 }

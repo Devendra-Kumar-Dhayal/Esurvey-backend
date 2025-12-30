@@ -7,6 +7,7 @@
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "seed:admin": "node src/scripts/seed-admin.js",
+    "seed:options": "node src/scripts/seed-options.js",
     "test": "jest --coverage --setupFilesAfterEnv=./src/__tests__/setup.js",
     "test:watch": "jest --watch --setupFilesAfterEnv=./src/__tests__/setup.js"
   },
