@@ -2,6 +2,8 @@ const express = require('express');
 const { body, param, query } = require('express-validator');
 const {
   checkQR,
+  associateQRToVehicle,
+  assignTransporter,
   associateVehicle,
   startTrip,
   getActiveTrip,
@@ -31,6 +33,19 @@ const router = express.Router();
 // Validation rules
 const checkQRValidation = [
   body('qrCode').trim().notEmpty().withMessage('QR code is required'),
+  handleValidationErrors,
+];
+
+const associateQRToVehicleValidation = [
+  body('qrCode').trim().notEmpty().withMessage('QR code is required'),
+  body('vehicleNumber').trim().notEmpty().withMessage('Vehicle number is required'),
+  handleValidationErrors,
+];
+
+const assignTransporterValidation = [
+  body('vehicleNumber').trim().notEmpty().withMessage('Vehicle number is required'),
+  body('transporterId').isMongoId().withMessage('Valid transporter is required'),
+  body('qrCode').optional().trim(),
   handleValidationErrors,
 ];
 
@@ -77,7 +92,6 @@ const wayBridgeDataValidation = [
   body('tareWeight').isFloat({ min: 0 }).withMessage('Tare weight must be a positive number'),
   body('qrCode').optional().trim(),
   body('weighBridgeSlipNo').optional().trim(),
-  body('loadingPointSlipNo').optional().trim(),
   body('previousTripReason').optional().trim(),
   handleValidationErrors,
 ];
@@ -117,6 +131,8 @@ router.use(protect);
 
 // QR and Vehicle routes
 router.post('/check', checkQRValidation, checkQR);
+router.post('/associate-vehicle', associateQRToVehicleValidation, associateQRToVehicle);
+router.post('/assign-transporter', assignTransporterValidation, assignTransporter);
 router.post('/associate', associateVehicleValidation, associateVehicle);
 router.get('/transporters', getTransporters);
 router.get('/loading-points', getLoadingPoints);

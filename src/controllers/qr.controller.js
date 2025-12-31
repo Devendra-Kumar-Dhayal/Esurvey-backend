@@ -48,7 +48,123 @@ const checkQR = async (req, res) => {
 };
 
 /**
- * Associate a vehicle number with a QR code
+ * Associate a vehicle number with a QR code (QR → Vehicle only)
+ * POST /api/qr/associate-vehicle
+ */
+const associateQRToVehicle = async (req, res) => {
+  try {
+    const { qrCode, vehicleNumber } = req.body;
+    const userId = req.user._id;
+
+    if (!qrCode) {
+      return sendError(res, 'QR code is required', 400);
+    }
+
+    if (!vehicleNumber) {
+      return sendError(res, 'Vehicle number is required', 400);
+    }
+
+    let qrVehicle = await QRVehicle.findOne({ qrCode });
+
+    if (qrVehicle) {
+      // Update existing QR with new vehicle number
+      qrVehicle.vehicleNumber = vehicleNumber.toUpperCase();
+      qrVehicle.lastUsedBy = userId;
+      qrVehicle.lastUsedAt = new Date();
+      await qrVehicle.save();
+    } else {
+      // Create new QR-Vehicle association
+      qrVehicle = await QRVehicle.create({
+        qrCode,
+        vehicleNumber: vehicleNumber.toUpperCase(),
+        createdBy: userId,
+        lastUsedBy: userId,
+        lastUsedAt: new Date(),
+      });
+    }
+
+    sendSuccess(res, {
+      qrCode: qrVehicle.qrCode,
+      vehicleNumber: qrVehicle.vehicleNumber,
+      transporterId: qrVehicle.transporterId || null,
+      transporterName: qrVehicle.transporterName || null,
+    }, 'QR code associated with vehicle successfully');
+  } catch (error) {
+    console.error('Associate QR to vehicle error:', error);
+    sendError(res, 'Failed to associate QR code with vehicle', 500);
+  }
+};
+
+/**
+ * Assign transporter to a vehicle (Vehicle → Transporter)
+ * POST /api/qr/assign-transporter
+ */
+const assignTransporter = async (req, res) => {
+  try {
+    const { vehicleNumber, transporterId, qrCode } = req.body;
+    const userId = req.user._id;
+
+    if (!vehicleNumber) {
+      return sendError(res, 'Vehicle number is required', 400);
+    }
+
+    if (!transporterId) {
+      return sendError(res, 'Transporter is required', 400);
+    }
+
+    // Validate transporter
+    const transporter = await DropdownOption.findOne({
+      _id: transporterId,
+      type: 'transporter',
+      isActive: true
+    });
+    if (!transporter) {
+      return sendError(res, 'Invalid transporter', 400);
+    }
+
+    // Find QR-Vehicle record by vehicle number or qrCode
+    let qrVehicle = null;
+    if (qrCode) {
+      qrVehicle = await QRVehicle.findOne({ qrCode });
+    }
+    if (!qrVehicle) {
+      qrVehicle = await QRVehicle.findOne({ vehicleNumber: vehicleNumber.toUpperCase() });
+    }
+
+    if (qrVehicle) {
+      // Update existing record with transporter
+      qrVehicle.transporterId = transporterId;
+      qrVehicle.transporterName = transporter.name;
+      qrVehicle.lastUsedBy = userId;
+      qrVehicle.lastUsedAt = new Date();
+      await qrVehicle.save();
+    } else {
+      // Create new record (vehicle without QR, but with transporter)
+      qrVehicle = await QRVehicle.create({
+        qrCode: qrCode || `VEHICLE_${vehicleNumber.toUpperCase()}`,
+        vehicleNumber: vehicleNumber.toUpperCase(),
+        transporterId,
+        transporterName: transporter.name,
+        createdBy: userId,
+        lastUsedBy: userId,
+        lastUsedAt: new Date(),
+      });
+    }
+
+    sendSuccess(res, {
+      qrCode: qrVehicle.qrCode,
+      vehicleNumber: qrVehicle.vehicleNumber,
+      transporterId: qrVehicle.transporterId,
+      transporterName: qrVehicle.transporterName,
+    }, 'Transporter assigned to vehicle successfully');
+  } catch (error) {
+    console.error('Assign transporter error:', error);
+    sendError(res, 'Failed to assign transporter', 500);
+  }
+};
+
+/**
+ * Associate a vehicle number with a QR code (legacy - with transporter)
  * POST /api/qr/associate
  */
 const associateVehicle = async (req, res) => {
@@ -379,7 +495,6 @@ const saveWayBridgeData = async (req, res) => {
       transporterId,
       loadingPointId,
       weighBridgeSlipNo,
-      loadingPointSlipNo,
       grossWeight,
       tareWeight,
       previousTripReason,
@@ -502,7 +617,6 @@ const saveWayBridgeData = async (req, res) => {
       loadingPointId,
       loadingPointName: loadingPoint.name,
       weighBridgeSlipNo,
-      loadingPointSlipNo,
       grossWeight,
       tareWeight,
     });
@@ -1034,6 +1148,8 @@ const getMissingLoadingPointEntries = async (req, res) => {
 
 module.exports = {
   checkQR,
+  associateQRToVehicle,
+  assignTransporter,
   associateVehicle,
   startTrip,
   getActiveTrip,

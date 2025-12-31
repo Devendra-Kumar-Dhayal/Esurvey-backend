@@ -62,10 +62,6 @@ const wayBridgeDataSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    loadingPointSlipNo: {
-      type: String,
-      trim: true,
-    },
     grossWeight: {
       type: Number,
       required: true,
