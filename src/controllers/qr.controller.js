@@ -3,6 +3,9 @@ const Trip = require('../models/Trip');
 const DropdownOption = require('../models/DropdownOption');
 const WayBridgeData = require('../models/WayBridgeData');
 const LoadingPointData = require('../models/LoadingPointData');
+const UnloadingPointData = require('../models/UnloadingPointData');
+const MissingLoadingPointEntry = require('../models/MissingLoadingPointEntry');
+const MissingUnloadingPointEntry = require('../models/MissingUnloadingPointEntry');
 const { sendSuccess, sendError } = require('../utils/response');
 
 /**
@@ -379,8 +382,44 @@ const saveWayBridgeData = async (req, res) => {
       loadingPointSlipNo,
       grossWeight,
       tareWeight,
+      previousTripReason,
     } = req.body;
     const userId = req.user._id;
+
+    // Check for active trip and end it if exists
+    const existingTrip = await Trip.findOne({
+      vehicleNumber: vehicleNumber.toUpperCase(),
+      status: 'active',
+    });
+
+    let endedPreviousTrip = null;
+    if (existingTrip) {
+      if (!previousTripReason || previousTripReason.trim() === '') {
+        return sendError(res, 'Reason for ending previous trip is required', 400);
+      }
+
+      // Log as missing unloading point entry
+      await MissingUnloadingPointEntry.create({
+        userId,
+        tripId: existingTrip._id,
+        vehicleNumber: vehicleNumber.toUpperCase(),
+        qrCode: existingTrip.qrCode,
+        previousProjectId: existingTrip.projectId,
+        previousProjectName: existingTrip.projectName,
+        previousSelectionType: existingTrip.selectionType,
+        previousSelectionName: existingTrip.selectionName,
+        tripStartTime: existingTrip.startTime,
+        tripEndTime: new Date(),
+        reason: previousTripReason,
+      });
+
+      // End the previous trip
+      existingTrip.status = 'cancelled';
+      existingTrip.endTime = new Date();
+      existingTrip.notes = `Trip ended due to new trip start. Reason: ${previousTripReason}`;
+      await existingTrip.save();
+      endedPreviousTrip = existingTrip;
+    }
 
     // Validate way bridge
     const wayBridge = await DropdownOption.findOne({
@@ -434,9 +473,24 @@ const saveWayBridgeData = async (req, res) => {
       }
     }
 
-    // Create way bridge data entry
+    // Create the trip with status 'active'
+    const trip = await Trip.create({
+      userId,
+      qrCode,
+      vehicleNumber: vehicleNumber.toUpperCase(),
+      projectId,
+      projectName: project.name,
+      selectionType: 'way_bridge',
+      selectionId: wayBridgeId,
+      selectionName: wayBridge.name,
+      startTime: new Date(),
+      status: 'active',
+    });
+
+    // Create way bridge data entry with trip reference
     const wayBridgeData = await WayBridgeData.create({
       userId,
+      tripId: trip._id,
       qrCode,
       vehicleNumber: vehicleNumber.toUpperCase(),
       wayBridgeId,
@@ -453,7 +507,14 @@ const saveWayBridgeData = async (req, res) => {
       tareWeight,
     });
 
-    sendSuccess(res, { wayBridgeData }, 'Way bridge data saved successfully', 201);
+    sendSuccess(
+      res,
+      { wayBridgeData, trip, endedPreviousTrip },
+      endedPreviousTrip
+        ? 'Previous trip ended and new way bridge data saved successfully'
+        : 'Way bridge data saved and trip started successfully',
+      201
+    );
   } catch (error) {
     console.error('Save way bridge data error:', error);
     sendError(res, 'Failed to save way bridge data', 500);
@@ -506,8 +567,44 @@ const saveLoadingPointData = async (req, res) => {
       notes,
       latitude,
       longitude,
+      previousTripReason,
     } = req.body;
     const userId = req.user._id;
+
+    // Check for active trip and end it if exists
+    const existingTrip = await Trip.findOne({
+      vehicleNumber: vehicleNumber.toUpperCase(),
+      status: 'active',
+    });
+
+    let endedPreviousTrip = null;
+    if (existingTrip) {
+      if (!previousTripReason || previousTripReason.trim() === '') {
+        return sendError(res, 'Reason for ending previous trip is required', 400);
+      }
+
+      // Log as missing unloading point entry
+      await MissingUnloadingPointEntry.create({
+        userId,
+        tripId: existingTrip._id,
+        vehicleNumber: vehicleNumber.toUpperCase(),
+        qrCode: existingTrip.qrCode,
+        previousProjectId: existingTrip.projectId,
+        previousProjectName: existingTrip.projectName,
+        previousSelectionType: existingTrip.selectionType,
+        previousSelectionName: existingTrip.selectionName,
+        tripStartTime: existingTrip.startTime,
+        tripEndTime: new Date(),
+        reason: previousTripReason,
+      });
+
+      // End the previous trip
+      existingTrip.status = 'cancelled';
+      existingTrip.endTime = new Date();
+      existingTrip.notes = `Trip ended due to new trip start. Reason: ${previousTripReason}`;
+      await existingTrip.save();
+      endedPreviousTrip = existingTrip;
+    }
 
     // Validate loading point
     const loadingPoint = await DropdownOption.findOne({
@@ -588,8 +685,10 @@ const saveLoadingPointData = async (req, res) => {
 
     sendSuccess(
       res,
-      { loadingPointData, trip },
-      'Loading point data saved and trip started successfully',
+      { loadingPointData, trip, endedPreviousTrip },
+      endedPreviousTrip
+        ? 'Previous trip ended and new loading point data saved successfully'
+        : 'Loading point data saved and trip started successfully',
       201
     );
   } catch (error) {
@@ -634,6 +733,305 @@ const getLoadingPointDataHistory = async (req, res) => {
   }
 };
 
+/**
+ * Check if vehicle has active trip (for way bridge / loading point screens)
+ * GET /api/qr/check-vehicle-trip/:vehicleNumber
+ */
+const checkVehicleActiveTrip = async (req, res) => {
+  try {
+    const { vehicleNumber } = req.params;
+
+    const activeTrip = await Trip.findOne({
+      vehicleNumber: vehicleNumber.toUpperCase(),
+      status: 'active',
+    })
+      .populate('projectId', 'name code')
+      .populate('selectionId', 'name code')
+      .lean();
+
+    if (!activeTrip) {
+      return sendSuccess(res, { hasActiveTrip: false, trip: null }, 'No active trip found');
+    }
+
+    sendSuccess(
+      res,
+      {
+        hasActiveTrip: true,
+        trip: {
+          id: activeTrip._id,
+          vehicleNumber: activeTrip.vehicleNumber,
+          projectName: activeTrip.projectName,
+          selectionType: activeTrip.selectionType,
+          selectionName: activeTrip.selectionName,
+          startTime: activeTrip.startTime,
+        },
+      },
+      'Active trip found for vehicle'
+    );
+  } catch (error) {
+    console.error('Check vehicle active trip error:', error);
+    sendError(res, 'Failed to check vehicle trip', 500);
+  }
+};
+
+/**
+ * Get active trip by vehicle number for unloading
+ * GET /api/qr/active-trip-by-vehicle/:vehicleNumber
+ */
+const getActiveTripByVehicle = async (req, res) => {
+  try {
+    const { vehicleNumber } = req.params;
+
+    // Find active trip for this vehicle
+    const trip = await Trip.findOne({
+      vehicleNumber: vehicleNumber.toUpperCase(),
+      status: 'active',
+    }).sort({ startTime: -1 });
+
+    if (!trip) {
+      return sendError(res, 'No active trip found for this vehicle', 404);
+    }
+
+    // Try to get way bridge data for this trip (if exists)
+    let wayBridgeData = null;
+    if (trip.tripId || trip._id) {
+      wayBridgeData = await WayBridgeData.findOne({ tripId: trip._id });
+    }
+
+    // If no way bridge data, try to find by vehicle number
+    if (!wayBridgeData) {
+      wayBridgeData = await WayBridgeData.findOne({
+        vehicleNumber: vehicleNumber.toUpperCase(),
+      }).sort({ createdAt: -1 });
+    }
+
+    sendSuccess(res, {
+      trip,
+      wayBridgeData,
+    }, 'Active trip found');
+  } catch (error) {
+    console.error('Get active trip by vehicle error:', error);
+    sendError(res, 'Failed to get active trip', 500);
+  }
+};
+
+/**
+ * Get unloading points
+ * GET /api/qr/unloading-points
+ */
+const getUnloadingPoints = async (req, res) => {
+  try {
+    const unloadingPoints = await DropdownOption.find({
+      type: 'unloading_point',
+      isActive: true,
+    }).sort({ name: 1 });
+
+    sendSuccess(res, { unloadingPoints }, 'Unloading points retrieved');
+  } catch (error) {
+    console.error('Get unloading points error:', error);
+    sendError(res, 'Failed to get unloading points', 500);
+  }
+};
+
+/**
+ * Save unloading point data and close trip
+ * POST /api/qr/unloading-point-data
+ */
+const saveUnloadingPointData = async (req, res) => {
+  try {
+    const {
+      tripId,
+      qrCode,
+      vehicleNumber,
+      wayBridgeSlipNo,
+      loadingPointSlipNo,
+      loadingPointName,
+      wayBridgeName,
+      grossWeight,
+      tareWeight,
+      netWeight,
+      unloadingPointId,
+      projectId,
+      notes,
+    } = req.body;
+    const userId = req.user._id;
+
+    // Validate trip exists and is active
+    const trip = await Trip.findOne({
+      _id: tripId,
+      status: 'active',
+    });
+    if (!trip) {
+      return sendError(res, 'Trip not found or already closed', 400);
+    }
+
+    // Validate unloading point
+    const unloadingPoint = await DropdownOption.findOne({
+      _id: unloadingPointId,
+      type: 'unloading_point',
+      isActive: true,
+    });
+    if (!unloadingPoint) {
+      return sendError(res, 'Invalid unloading point', 400);
+    }
+
+    // Validate project
+    const project = await DropdownOption.findOne({
+      _id: projectId,
+      type: 'project',
+      isActive: true,
+    });
+    if (!project) {
+      return sendError(res, 'Invalid project', 400);
+    }
+
+    // Create unloading point data entry
+    const unloadingPointData = await UnloadingPointData.create({
+      userId,
+      tripId,
+      qrCode,
+      vehicleNumber: vehicleNumber.toUpperCase(),
+      wayBridgeSlipNo,
+      loadingPointSlipNo,
+      loadingPointName,
+      wayBridgeName,
+      grossWeight,
+      tareWeight,
+      netWeight,
+      unloadingPointId,
+      unloadingPointName: unloadingPoint.name,
+      projectId,
+      projectName: project.name,
+      notes,
+    });
+
+    // Close the trip
+    trip.status = 'completed';
+    trip.endTime = new Date();
+    await trip.save();
+
+    sendSuccess(
+      res,
+      { unloadingPointData, trip },
+      'Unloading point data saved and trip completed successfully',
+      201
+    );
+  } catch (error) {
+    console.error('Save unloading point data error:', error);
+    sendError(res, 'Failed to save unloading point data', 500);
+  }
+};
+
+/**
+ * Get unloading point data history
+ * GET /api/qr/unloading-point-data
+ */
+const getUnloadingPointDataHistory = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { limit = 20, skip = 0 } = req.query;
+
+    const data = await UnloadingPointData.find({ userId })
+      .populate('tripId')
+      .sort({ createdAt: -1 })
+      .skip(parseInt(skip, 10))
+      .limit(parseInt(limit, 10));
+
+    const total = await UnloadingPointData.countDocuments({ userId });
+
+    sendSuccess(
+      res,
+      {
+        data,
+        pagination: {
+          total,
+          limit: parseInt(limit, 10),
+          skip: parseInt(skip, 10),
+          hasMore: parseInt(skip, 10) + data.length < total,
+        },
+      },
+      'Unloading point data history retrieved'
+    );
+  } catch (error) {
+    console.error('Get unloading point data history error:', error);
+    sendError(res, 'Failed to get unloading point data history', 500);
+  }
+};
+
+/**
+ * Log missing loading point entry
+ * POST /api/qr/missing-loading-point
+ */
+const logMissingLoadingPoint = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const {
+      vehicleNumber,
+      qrCode,
+      unloadingPointId,
+      unloadingPointName,
+      projectId,
+      projectName,
+      reason,
+    } = req.body;
+
+    if (!vehicleNumber) {
+      return sendError(res, 'Vehicle number is required', 400);
+    }
+
+    const entry = await MissingLoadingPointEntry.create({
+      userId,
+      vehicleNumber: vehicleNumber.toUpperCase(),
+      qrCode,
+      unloadingPointId,
+      unloadingPointName,
+      projectId,
+      projectName,
+      reason: reason || 'Loading point entry missing',
+    });
+
+    sendSuccess(res, { entry }, 'Missing loading point entry logged', 201);
+  } catch (error) {
+    console.error('Log missing loading point error:', error);
+    sendError(res, 'Failed to log missing loading point entry', 500);
+  }
+};
+
+/**
+ * Get missing loading point entries (for admin)
+ * GET /api/qr/missing-loading-point
+ */
+const getMissingLoadingPointEntries = async (req, res) => {
+  try {
+    const { limit = 50, skip = 0 } = req.query;
+
+    const entries = await MissingLoadingPointEntry.find()
+      .populate('userId', 'name email')
+      .sort({ createdAt: -1 })
+      .skip(parseInt(skip, 10))
+      .limit(parseInt(limit, 10));
+
+    const total = await MissingLoadingPointEntry.countDocuments();
+
+    sendSuccess(
+      res,
+      {
+        entries,
+        pagination: {
+          total,
+          limit: parseInt(limit, 10),
+          skip: parseInt(skip, 10),
+          hasMore: parseInt(skip, 10) + entries.length < total,
+        },
+      },
+      'Missing loading point entries retrieved'
+    );
+  } catch (error) {
+    console.error('Get missing loading point entries error:', error);
+    sendError(res, 'Failed to get missing loading point entries', 500);
+  }
+};
+
 module.exports = {
   checkQR,
   associateVehicle,
@@ -649,4 +1047,11 @@ module.exports = {
   getWayBridgeDataHistory,
   saveLoadingPointData,
   getLoadingPointDataHistory,
+  checkVehicleActiveTrip,
+  getActiveTripByVehicle,
+  getUnloadingPoints,
+  saveUnloadingPointData,
+  getUnloadingPointDataHistory,
+  logMissingLoadingPoint,
+  getMissingLoadingPointEntries,
 };

@@ -282,6 +282,11 @@ body {
   color: #d63031;
 }
 
+.status-cancelled {
+  background: #636e7233;
+  color: #636e72;
+}
+
 /* Search Bar */
 .search-bar {
   display: flex;

@@ -2,6 +2,7 @@ const User = require('../models/User');
 const Location = require('../models/Location');
 const Role = require('../models/Role');
 const DropdownOption = require('../models/DropdownOption');
+const Trip = require('../models/Trip');
 const { generateAdminToken } = require('../middleware/admin.middleware');
 const { sendSuccess, sendError, sendPaginated } = require('../utils/response');
 
@@ -433,6 +434,45 @@ const reorderDropdownOptions = async (req, res) => {
   }
 };
 
+// Trip Management
+const getActiveTrips = async (req, res) => {
+  try {
+    const { limit = 50, skip = 0, status = 'active' } = req.query;
+
+    const query = {};
+    if (status && status !== 'all') {
+      query.status = status;
+    }
+
+    const trips = await Trip.find(query)
+      .populate('userId', 'name email')
+      .populate('projectId', 'name code')
+      .populate('selectionId', 'name code')
+      .sort({ startTime: -1 })
+      .skip(parseInt(skip, 10))
+      .limit(parseInt(limit, 10))
+      .lean();
+
+    const total = await Trip.countDocuments(query);
+    const activeCount = await Trip.countDocuments({ status: 'active' });
+
+    sendPaginated(
+      res,
+      { trips, activeCount },
+      {
+        total,
+        limit: parseInt(limit, 10),
+        skip: parseInt(skip, 10),
+        hasMore: parseInt(skip, 10) + trips.length < total,
+      },
+      'Trips retrieved successfully'
+    );
+  } catch (error) {
+    console.error('Get active trips error:', error);
+    sendError(res, 'Failed to get trips', 500);
+  }
+};
+
 module.exports = {
   adminLogin,
   getAdminProfile,
@@ -450,4 +490,5 @@ module.exports = {
   updateDropdownOption,
   deleteDropdownOption,
   reorderDropdownOptions,
+  getActiveTrips,
 };

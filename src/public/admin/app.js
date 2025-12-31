@@ -6,6 +6,8 @@ let rolesCache = [];
 let permissionsCache = { permissions: [], grouped: {} };
 let currentOptionType = 'project';
 let dropdownOptionsCache = { grouped: {} };
+let tripsPage = 0;
+const tripsPageSize = 20;
 
 // API Helper
 async function apiRequest(endpoint, options = {}) {
@@ -75,6 +77,7 @@ function showSection(section) {
   if (section === 'roles') loadRoles();
   if (section === 'create-user') populateRoleDropdowns();
   if (section === 'dropdown-options') loadDropdownOptions();
+  if (section === 'open-trips') loadTrips();
 }
 
 function showModal(modalId) {
@@ -616,6 +619,70 @@ async function deleteOption(optionId, optionName) {
   }
 }
 
+// Trips
+function formatDateTime(dateString) {
+  if (!dateString) return 'N/A';
+  return new Date(dateString).toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function getStatusBadgeClass(status) {
+  switch (status) {
+    case 'active': return 'status-active';
+    case 'completed': return 'status-inactive';
+    case 'cancelled': return 'status-cancelled';
+    default: return '';
+  }
+}
+
+async function loadTrips() {
+  try {
+    const skip = tripsPage * tripsPageSize;
+    const statusFilter = document.getElementById('trip-status-filter').value;
+    let endpoint = `/trips?limit=${tripsPageSize}&skip=${skip}`;
+    if (statusFilter) endpoint += `&status=${statusFilter}`;
+
+    const data = await apiRequest(endpoint);
+    const { trips, activeCount } = data.data;
+    const { total, hasMore } = data.pagination;
+
+    document.getElementById('stat-active-trips').textContent = activeCount;
+
+    const tbody = document.getElementById('trips-table');
+
+    if (trips.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #636e72;">No trips found.</td></tr>';
+    } else {
+      tbody.innerHTML = trips.map(trip => `
+        <tr>
+          <td><strong>${trip.vehicleNumber}</strong></td>
+          <td>${trip.userId ? trip.userId.name : 'Unknown'}</td>
+          <td>${trip.projectId ? trip.projectId.name : trip.projectName || '-'}</td>
+          <td>
+            <span class="role-badge">${trip.selectionType.replace('_', ' ')}</span>
+            ${trip.selectionId ? trip.selectionId.name : trip.selectionName || '-'}
+          </td>
+          <td>${formatDateTime(trip.startTime)}</td>
+          <td><span class="status-badge ${getStatusBadgeClass(trip.status)}">
+            ${trip.status.charAt(0).toUpperCase() + trip.status.slice(1)}
+          </span></td>
+        </tr>
+      `).join('');
+    }
+
+    document.getElementById('trips-page-info').textContent = `Page ${tripsPage + 1} of ${Math.ceil(total / tripsPageSize) || 1}`;
+    document.getElementById('prev-trips-page').disabled = tripsPage === 0;
+    document.getElementById('next-trips-page').disabled = !hasMore;
+  } catch (error) {
+    console.error('Failed to load trips:', error);
+  }
+}
+
 // Event Listeners
 document.addEventListener('DOMContentLoaded', () => {
   // Check if logged in
@@ -710,6 +777,29 @@ document.addEventListener('DOMContentLoaded', () => {
       const tabType = btn.dataset.tab === 'projects' ? 'project' : btn.dataset.tab;
       switchOptionTab(tabType);
     });
+  });
+
+  // Trips
+  document.getElementById('refresh-trips-btn').addEventListener('click', () => {
+    tripsPage = 0;
+    loadTrips();
+  });
+
+  document.getElementById('trip-status-filter').addEventListener('change', () => {
+    tripsPage = 0;
+    loadTrips();
+  });
+
+  document.getElementById('prev-trips-page').addEventListener('click', () => {
+    if (tripsPage > 0) {
+      tripsPage--;
+      loadTrips();
+    }
+  });
+
+  document.getElementById('next-trips-page').addEventListener('click', () => {
+    tripsPage++;
+    loadTrips();
   });
 
   // Modal close buttons

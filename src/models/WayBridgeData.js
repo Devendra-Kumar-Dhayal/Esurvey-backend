@@ -8,6 +8,10 @@ const wayBridgeDataSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    tripId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Trip',
+    },
     qrCode: {
       type: String,
       trim: true,
@@ -95,5 +99,6 @@ wayBridgeDataSchema.pre('save', function (next) {
 wayBridgeDataSchema.index({ vehicleNumber: 1 });
 wayBridgeDataSchema.index({ timestamp: -1 });
 wayBridgeDataSchema.index({ projectId: 1 });
+wayBridgeDataSchema.index({ tripId: 1 });
 
 module.exports = mongoose.model('WayBridgeData', wayBridgeDataSchema);

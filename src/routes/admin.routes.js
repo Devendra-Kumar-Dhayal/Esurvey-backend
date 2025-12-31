@@ -17,6 +17,7 @@ const {
   updateDropdownOption,
   deleteDropdownOption,
   reorderDropdownOptions,
+  getActiveTrips,
 } = require('../controllers/admin.controller');
 const {
   createRole,
@@ -146,6 +147,9 @@ router.get('/dropdown-options/:id', param('id').isMongoId(), handleValidationErr
 router.put('/dropdown-options/:id', updateDropdownOptionValidation, updateDropdownOption);
 router.delete('/dropdown-options/:id', param('id').isMongoId(), handleValidationErrors, deleteDropdownOption);
 router.post('/dropdown-options/reorder', reorderDropdownOptionsValidation, reorderDropdownOptions);
+
+// Trip management
+router.get('/trips', getActiveTrips);
 
 // Superadmin only
 router.post('/admins', requireSuperAdmin, createAdminValidation, createAdmin);

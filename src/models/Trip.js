@@ -10,7 +10,6 @@ const tripSchema = new mongoose.Schema(
     },
     qrCode: {
       type: String,
-      required: true,
       trim: true,
     },
     vehicleNumber: {

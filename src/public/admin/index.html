@@ -41,6 +41,7 @@
       <div class="sidebar">
         <ul class="nav-menu">
           <li><a href="#" class="nav-link active" data-section="dashboard">Dashboard</a></li>
+          <li><a href="#" class="nav-link" data-section="open-trips">Open Trips</a></li>
           <li><a href="#" class="nav-link" data-section="users">Users</a></li>
           <li><a href="#" class="nav-link" data-section="create-user">Create User</a></li>
           <li><a href="#" class="nav-link" data-section="roles">Roles</a></li>
@@ -83,6 +84,46 @@
               </thead>
               <tbody id="recent-users-table"></tbody>
             </table>
+          </div>
+        </section>
+
+        <!-- Open Trips Section -->
+        <section id="open-trips-section" class="section hidden">
+          <h2>Open Trips</h2>
+          <div class="stats-grid" style="margin-bottom: 20px;">
+            <div class="stat-card">
+              <h3>Active Trips</h3>
+              <p id="stat-active-trips" class="stat-value">-</p>
+            </div>
+          </div>
+          <div class="search-bar">
+            <select id="trip-status-filter">
+              <option value="active">Active Only</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+              <option value="all">All Trips</option>
+            </select>
+            <button id="refresh-trips-btn" class="btn btn-primary">Refresh</button>
+          </div>
+          <div class="card">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Vehicle</th>
+                  <th>User</th>
+                  <th>Project</th>
+                  <th>Selection</th>
+                  <th>Start Time</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="trips-table"></tbody>
+            </table>
+            <div class="pagination">
+              <button id="prev-trips-page" class="btn btn-secondary" disabled>Previous</button>
+              <span id="trips-page-info">Page 1</span>
+              <button id="next-trips-page" class="btn btn-secondary">Next</button>
+            </div>
           </div>
         </section>
 
