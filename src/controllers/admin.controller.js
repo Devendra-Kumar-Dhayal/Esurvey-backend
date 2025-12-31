@@ -3,6 +3,8 @@ const Location = require('../models/Location');
 const Role = require('../models/Role');
 const DropdownOption = require('../models/DropdownOption');
 const Trip = require('../models/Trip');
+const MissingLoadingPointEntry = require('../models/MissingLoadingPointEntry');
+const MissingUnloadingPointEntry = require('../models/MissingUnloadingPointEntry');
 const { generateAdminToken } = require('../middleware/admin.middleware');
 const { sendSuccess, sendError, sendPaginated } = require('../utils/response');
 
@@ -434,6 +436,83 @@ const reorderDropdownOptions = async (req, res) => {
   }
 };
 
+// Suspicious Entries (Missing Loading/Unloading Point Entries)
+const getSuspiciousEntries = async (req, res) => {
+  try {
+    const { limit = 50, skip = 0, type = 'all' } = req.query;
+
+    let missingLoadingEntries = [];
+    let missingUnloadingEntries = [];
+
+    if (type === 'all' || type === 'loading') {
+      missingLoadingEntries = await MissingLoadingPointEntry.find()
+        .populate('userId', 'name email')
+        .sort({ createdAt: -1 })
+        .skip(type === 'loading' ? parseInt(skip, 10) : 0)
+        .limit(type === 'loading' ? parseInt(limit, 10) : 25)
+        .lean();
+    }
+
+    if (type === 'all' || type === 'unloading') {
+      missingUnloadingEntries = await MissingUnloadingPointEntry.find()
+        .populate('userId', 'name email')
+        .populate('tripId', 'vehicleNumber projectName selectionName')
+        .sort({ createdAt: -1 })
+        .skip(type === 'unloading' ? parseInt(skip, 10) : 0)
+        .limit(type === 'unloading' ? parseInt(limit, 10) : 25)
+        .lean();
+    }
+
+    // Add type identifier to each entry
+    const loadingWithType = missingLoadingEntries.map(entry => ({
+      ...entry,
+      entryType: 'missing_loading',
+      description: 'Loading point entry was missing when unloading attempted',
+    }));
+
+    const unloadingWithType = missingUnloadingEntries.map(entry => ({
+      ...entry,
+      entryType: 'missing_unloading',
+      description: 'Previous trip was not properly ended',
+    }));
+
+    // Combine and sort by date
+    let allEntries = [...loadingWithType, ...unloadingWithType];
+    allEntries.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    // Apply pagination for 'all' type
+    if (type === 'all') {
+      allEntries = allEntries.slice(parseInt(skip, 10), parseInt(skip, 10) + parseInt(limit, 10));
+    }
+
+    const totalLoading = await MissingLoadingPointEntry.countDocuments();
+    const totalUnloading = await MissingUnloadingPointEntry.countDocuments();
+    const total = type === 'loading' ? totalLoading : type === 'unloading' ? totalUnloading : totalLoading + totalUnloading;
+
+    sendPaginated(
+      res,
+      {
+        entries: allEntries,
+        counts: {
+          loading: totalLoading,
+          unloading: totalUnloading,
+          total: totalLoading + totalUnloading,
+        },
+      },
+      {
+        total,
+        limit: parseInt(limit, 10),
+        skip: parseInt(skip, 10),
+        hasMore: parseInt(skip, 10) + allEntries.length < total,
+      },
+      'Suspicious entries retrieved successfully'
+    );
+  } catch (error) {
+    console.error('Get suspicious entries error:', error);
+    sendError(res, 'Failed to get suspicious entries', 500);
+  }
+};
+
 // Trip Management
 const getActiveTrips = async (req, res) => {
   try {
@@ -490,5 +569,6 @@ module.exports = {
   updateDropdownOption,
   deleteDropdownOption,
   reorderDropdownOptions,
+  getSuspiciousEntries,
   getActiveTrips,
 };

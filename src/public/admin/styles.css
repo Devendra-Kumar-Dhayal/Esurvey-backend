@@ -287,6 +287,11 @@ body {
   color: #636e72;
 }
 
+.status-warning {
+  background: #fdcb6e33;
+  color: #d35400;
+}
+
 /* Search Bar */
 .search-bar {
   display: flex;
@@ -309,6 +314,21 @@ body {
 
 .search-bar .btn {
   width: auto;
+}
+
+.search-bar select {
+  padding: 12px 16px;
+  border: 2px solid #dfe6e9;
+  border-radius: 8px;
+  font-size: 16px;
+  min-width: 180px;
+  background: white;
+  cursor: pointer;
+}
+
+.search-bar select:focus {
+  outline: none;
+  border-color: #0984e3;
 }
 
 /* Pagination */

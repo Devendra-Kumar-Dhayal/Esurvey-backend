@@ -8,6 +8,8 @@ let currentOptionType = 'project';
 let dropdownOptionsCache = { grouped: {} };
 let tripsPage = 0;
 const tripsPageSize = 20;
+let suspiciousPage = 0;
+const suspiciousPageSize = 20;
 
 // API Helper
 async function apiRequest(endpoint, options = {}) {
@@ -78,6 +80,7 @@ function showSection(section) {
   if (section === 'create-user') populateRoleDropdowns();
   if (section === 'dropdown-options') loadDropdownOptions();
   if (section === 'open-trips') loadTrips();
+  if (section === 'suspicious-entries') loadSuspiciousEntries();
 }
 
 function showModal(modalId) {
@@ -683,6 +686,55 @@ async function loadTrips() {
   }
 }
 
+// Suspicious Entries
+function getSuspiciousTypeBadge(entryType) {
+  if (entryType === 'missing_loading') {
+    return '<span class="status-badge status-warning">Missing Loading</span>';
+  }
+  return '<span class="status-badge status-cancelled">Missing Unloading</span>';
+}
+
+async function loadSuspiciousEntries() {
+  try {
+    const skip = suspiciousPage * suspiciousPageSize;
+    const typeFilter = document.getElementById('suspicious-type-filter').value;
+    let endpoint = `/suspicious-entries?limit=${suspiciousPageSize}&skip=${skip}`;
+    if (typeFilter && typeFilter !== 'all') endpoint += `&type=${typeFilter}`;
+
+    const data = await apiRequest(endpoint);
+    const { entries, counts } = data.data;
+    const { total, hasMore } = data.pagination;
+
+    // Update stats
+    document.getElementById('stat-missing-loading').textContent = counts.loading;
+    document.getElementById('stat-missing-unloading').textContent = counts.unloading;
+    document.getElementById('stat-total-suspicious').textContent = counts.total;
+
+    const tbody = document.getElementById('suspicious-entries-table');
+
+    if (entries.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #636e72;">No suspicious entries found.</td></tr>';
+    } else {
+      tbody.innerHTML = entries.map(entry => `
+        <tr>
+          <td>${getSuspiciousTypeBadge(entry.entryType)}</td>
+          <td><strong>${entry.vehicleNumber || '-'}</strong></td>
+          <td>${entry.userId ? entry.userId.name : 'Unknown'}</td>
+          <td>${entry.projectName || '-'}</td>
+          <td>${entry.reason || entry.description || '-'}</td>
+          <td>${formatDateTime(entry.createdAt)}</td>
+        </tr>
+      `).join('');
+    }
+
+    document.getElementById('suspicious-page-info').textContent = `Page ${suspiciousPage + 1} of ${Math.ceil(total / suspiciousPageSize) || 1}`;
+    document.getElementById('prev-suspicious-page').disabled = suspiciousPage === 0;
+    document.getElementById('next-suspicious-page').disabled = !hasMore;
+  } catch (error) {
+    console.error('Failed to load suspicious entries:', error);
+  }
+}
+
 // Event Listeners
 document.addEventListener('DOMContentLoaded', () => {
   // Check if logged in
@@ -800,6 +852,29 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('next-trips-page').addEventListener('click', () => {
     tripsPage++;
     loadTrips();
+  });
+
+  // Suspicious Entries
+  document.getElementById('refresh-suspicious-btn').addEventListener('click', () => {
+    suspiciousPage = 0;
+    loadSuspiciousEntries();
+  });
+
+  document.getElementById('suspicious-type-filter').addEventListener('change', () => {
+    suspiciousPage = 0;
+    loadSuspiciousEntries();
+  });
+
+  document.getElementById('prev-suspicious-page').addEventListener('click', () => {
+    if (suspiciousPage > 0) {
+      suspiciousPage--;
+      loadSuspiciousEntries();
+    }
+  });
+
+  document.getElementById('next-suspicious-page').addEventListener('click', () => {
+    suspiciousPage++;
+    loadSuspiciousEntries();
   });
 
   // Modal close buttons

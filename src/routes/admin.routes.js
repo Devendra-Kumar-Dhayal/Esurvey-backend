@@ -18,6 +18,7 @@ const {
   deleteDropdownOption,
   reorderDropdownOptions,
   getActiveTrips,
+  getSuspiciousEntries,
 } = require('../controllers/admin.controller');
 const {
   createRole,
@@ -150,6 +151,9 @@ router.post('/dropdown-options/reorder', reorderDropdownOptionsValidation, reord
 
 // Trip management
 router.get('/trips', getActiveTrips);
+
+// Suspicious entries (missing loading/unloading point entries)
+router.get('/suspicious-entries', getSuspiciousEntries);
 
 // Superadmin only
 router.post('/admins', requireSuperAdmin, createAdminValidation, createAdmin);

@@ -42,6 +42,7 @@
         <ul class="nav-menu">
           <li><a href="#" class="nav-link active" data-section="dashboard">Dashboard</a></li>
           <li><a href="#" class="nav-link" data-section="open-trips">Open Trips</a></li>
+          <li><a href="#" class="nav-link" data-section="suspicious-entries">Suspicious Entries</a></li>
           <li><a href="#" class="nav-link" data-section="users">Users</a></li>
           <li><a href="#" class="nav-link" data-section="create-user">Create User</a></li>
           <li><a href="#" class="nav-link" data-section="roles">Roles</a></li>
@@ -123,6 +124,54 @@
               <button id="prev-trips-page" class="btn btn-secondary" disabled>Previous</button>
               <span id="trips-page-info">Page 1</span>
               <button id="next-trips-page" class="btn btn-secondary">Next</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Suspicious Entries Section -->
+        <section id="suspicious-entries-section" class="section hidden">
+          <h2>Suspicious Entries</h2>
+          <p class="section-description">Entries logged when data is missing or trips were not properly ended.</p>
+          <div class="stats-grid" style="margin-bottom: 20px;">
+            <div class="stat-card">
+              <h3>Missing Loading</h3>
+              <p id="stat-missing-loading" class="stat-value">-</p>
+            </div>
+            <div class="stat-card">
+              <h3>Missing Unloading</h3>
+              <p id="stat-missing-unloading" class="stat-value">-</p>
+            </div>
+            <div class="stat-card">
+              <h3>Total Suspicious</h3>
+              <p id="stat-total-suspicious" class="stat-value">-</p>
+            </div>
+          </div>
+          <div class="search-bar">
+            <select id="suspicious-type-filter">
+              <option value="all">All Types</option>
+              <option value="loading">Missing Loading Point</option>
+              <option value="unloading">Missing Unloading Point</option>
+            </select>
+            <button id="refresh-suspicious-btn" class="btn btn-primary">Refresh</button>
+          </div>
+          <div class="card">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Vehicle</th>
+                  <th>User</th>
+                  <th>Project</th>
+                  <th>Reason</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody id="suspicious-entries-table"></tbody>
+            </table>
+            <div class="pagination">
+              <button id="prev-suspicious-page" class="btn btn-secondary" disabled>Previous</button>
+              <span id="suspicious-page-info">Page 1</span>
+              <button id="next-suspicious-page" class="btn btn-secondary">Next</button>
             </div>
           </div>
         </section>
