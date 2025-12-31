@@ -2,6 +2,7 @@ const express = require('express');
 const { body, param, query } = require('express-validator');
 const {
   checkQR,
+  checkVehicle,
   associateQRToVehicle,
   assignTransporter,
   associateVehicle,
@@ -131,6 +132,7 @@ router.use(protect);
 
 // QR and Vehicle routes
 router.post('/check', checkQRValidation, checkQR);
+router.get('/check-vehicle/:vehicleNumber', checkVehicle);
 router.post('/associate-vehicle', associateQRToVehicleValidation, associateQRToVehicle);
 router.post('/assign-transporter', assignTransporterValidation, assignTransporter);
 router.post('/associate', associateVehicleValidation, associateVehicle);

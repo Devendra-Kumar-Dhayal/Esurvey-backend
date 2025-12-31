@@ -48,6 +48,46 @@ const checkQR = async (req, res) => {
 };
 
 /**
+ * Check if a vehicle number has transporter associated
+ * GET /api/qr/check-vehicle/:vehicleNumber
+ */
+const checkVehicle = async (req, res) => {
+  try {
+    const { vehicleNumber } = req.params;
+
+    if (!vehicleNumber) {
+      return sendError(res, 'Vehicle number is required', 400);
+    }
+
+    const qrVehicle = await QRVehicle.findOne({
+      vehicleNumber: vehicleNumber.toUpperCase(),
+      isActive: true
+    });
+
+    if (qrVehicle && qrVehicle.transporterId) {
+      return sendSuccess(res, {
+        hasTransporter: true,
+        vehicleNumber: qrVehicle.vehicleNumber,
+        transporterId: qrVehicle.transporterId,
+        transporterName: qrVehicle.transporterName,
+        qrCode: qrVehicle.qrCode,
+      }, 'Vehicle has transporter');
+    }
+
+    return sendSuccess(res, {
+      hasTransporter: false,
+      vehicleNumber: vehicleNumber.toUpperCase(),
+      transporterId: null,
+      transporterName: null,
+      qrCode: qrVehicle?.qrCode || null,
+    }, 'Vehicle does not have transporter');
+  } catch (error) {
+    console.error('Check vehicle error:', error);
+    sendError(res, 'Failed to check vehicle', 500);
+  }
+};
+
+/**
  * Associate a vehicle number with a QR code (QR → Vehicle only)
  * POST /api/qr/associate-vehicle
  */
@@ -1148,6 +1188,7 @@ const getMissingLoadingPointEntries = async (req, res) => {
 
 module.exports = {
   checkQR,
+  checkVehicle,
   associateQRToVehicle,
   assignTransporter,
   associateVehicle,
