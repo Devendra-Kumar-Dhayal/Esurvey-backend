@@ -987,7 +987,12 @@ const getActiveTripByVehicle = async (req, res) => {
     }).sort({ startTime: -1 });
 
     if (!trip) {
-      return sendError(res, 'No active trip found for this vehicle', 404);
+      // Return success with null trip instead of 404 error
+      // This allows frontend to handle the "no active trip" case properly
+      return sendSuccess(res, {
+        trip: null,
+        wayBridgeData: null,
+      }, 'No active trip found for this vehicle');
     }
 
     // Try to get way bridge data for this trip (if exists)
