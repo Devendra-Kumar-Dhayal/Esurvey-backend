@@ -9,6 +9,7 @@ const telemetryRoutes = require('./routes/telemetry.routes');
 const adminRoutes = require('./routes/admin.routes');
 const selectionRoutes = require('./routes/selection.routes');
 const qrRoutes = require('./routes/qr.routes');
+const imageRoutes = require('./routes/image.routes');
 const { sendError } = require('./utils/response');
 
 const app = express();
@@ -29,6 +30,7 @@ app.use('/api/telemetry', telemetryRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/selection', selectionRoutes);
 app.use('/api/qr', qrRoutes);
+app.use('/api/images', imageRoutes);
 
 app.use((req, res) => {
   sendError(res, 'Route not found', 404);

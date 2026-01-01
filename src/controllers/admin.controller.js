@@ -5,6 +5,7 @@ const DropdownOption = require('../models/DropdownOption');
 const Trip = require('../models/Trip');
 const MissingLoadingPointEntry = require('../models/MissingLoadingPointEntry');
 const MissingUnloadingPointEntry = require('../models/MissingUnloadingPointEntry');
+const UnloadingPointData = require('../models/UnloadingPointData');
 const { generateAdminToken } = require('../middleware/admin.middleware');
 const { sendSuccess, sendError, sendPaginated } = require('../utils/response');
 
@@ -553,6 +554,60 @@ const getActiveTrips = async (req, res) => {
   }
 };
 
+// Completed Trips (Unloading Point Data)
+const getCompletedTrips = async (req, res) => {
+  try {
+    const { limit = 50, skip = 0, search } = req.query;
+
+    const query = {};
+    if (search) {
+      query.$or = [
+        { vehicleNumber: { $regex: search, $options: 'i' } },
+        { projectName: { $regex: search, $options: 'i' } },
+        { unloadingPointName: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const entries = await UnloadingPointData.find(query)
+      .populate('userId', 'name email')
+      .populate('tripId')
+      .populate('unloadingPointId', 'name code')
+      .populate('projectId', 'name code')
+      .sort({ timestamp: -1 })
+      .skip(parseInt(skip, 10))
+      .limit(parseInt(limit, 10))
+      .lean();
+
+    const total = await UnloadingPointData.countDocuments(query);
+    const withImagesCount = await UnloadingPointData.countDocuments({
+      ...query,
+      imagePath: { $exists: true, $ne: null, $ne: '' }
+    });
+
+    sendPaginated(
+      res,
+      {
+        entries,
+        stats: {
+          total,
+          withImages: withImagesCount,
+          withoutImages: total - withImagesCount,
+        }
+      },
+      {
+        total,
+        limit: parseInt(limit, 10),
+        skip: parseInt(skip, 10),
+        hasMore: parseInt(skip, 10) + entries.length < total,
+      },
+      'Completed trips retrieved successfully'
+    );
+  } catch (error) {
+    console.error('Get completed trips error:', error);
+    sendError(res, 'Failed to get completed trips', 500);
+  }
+};
+
 module.exports = {
   adminLogin,
   getAdminProfile,
@@ -572,4 +627,5 @@ module.exports = {
   reorderDropdownOptions,
   getSuspiciousEntries,
   getActiveTrips,
+  getCompletedTrips,
 };

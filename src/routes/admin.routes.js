@@ -19,6 +19,7 @@ const {
   reorderDropdownOptions,
   getActiveTrips,
   getSuspiciousEntries,
+  getCompletedTrips,
 } = require('../controllers/admin.controller');
 const {
   createRole,
@@ -151,6 +152,7 @@ router.post('/dropdown-options/reorder', reorderDropdownOptionsValidation, reord
 
 // Trip management
 router.get('/trips', getActiveTrips);
+router.get('/completed-trips', getCompletedTrips);
 
 // Suspicious entries (missing loading/unloading point entries)
 router.get('/suspicious-entries', getSuspiciousEntries);

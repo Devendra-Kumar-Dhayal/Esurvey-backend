@@ -10,6 +10,8 @@ let tripsPage = 0;
 const tripsPageSize = 20;
 let suspiciousPage = 0;
 const suspiciousPageSize = 20;
+let completedTripsPage = 0;
+const completedTripsPageSize = 20;
 
 // ============================================
 // UTILITY HELPERS (DRY principle)
@@ -144,6 +146,7 @@ function showSection(section) {
   if (section === 'roles') loadRoles();
   if (section === 'dropdown-options') loadDropdownOptions();
   if (section === 'open-trips') loadTrips();
+  if (section === 'completed-trips') loadCompletedTrips();
   if (section === 'suspicious-entries') loadSuspiciousEntries();
 }
 
@@ -717,6 +720,76 @@ async function loadTrips() {
   }
 }
 
+// Completed Trips
+async function loadCompletedTrips(search = '') {
+  try {
+    const skip = completedTripsPage * completedTripsPageSize;
+    let endpoint = `/completed-trips?limit=${completedTripsPageSize}&skip=${skip}`;
+    if (search) endpoint += `&search=${encodeURIComponent(search)}`;
+
+    const data = await apiRequest(endpoint);
+    const { entries, stats } = data.data;
+    const { total, hasMore } = data.pagination;
+
+    // Update stats
+    document.getElementById('stat-completed-total').textContent = stats.total;
+    document.getElementById('stat-with-images').textContent = stats.withImages;
+    document.getElementById('stat-without-images').textContent = stats.withoutImages;
+
+    const tbody = document.getElementById('completed-trips-table');
+
+    if (entries.length === 0) {
+      tbody.innerHTML = renderEmptyRow(7, 'No completed trips found.');
+    } else {
+      tbody.innerHTML = entries.map(entry => {
+        const hasImage = entry.imagePath && entry.imagePath.length > 0;
+        // Extract filename from imagePath (e.g., "images/unloading_point/uuid.jpg" -> "uuid.jpg")
+        const filename = hasImage ? entry.imagePath.split('/').pop() : '';
+        const escapedFilename = filename.replace(/'/g, "\\'");
+        const viewImageBtn = hasImage
+          ? `<button class="btn btn-primary btn-sm" onclick="viewImage('${escapedFilename}', '${entry.vehicleNumber}', '${entry.projectName || ''}', '${entry.unloadingPointName || ''}')">View Image</button>`
+          : `<button class="btn btn-secondary btn-sm" disabled style="opacity: 0.5; cursor: not-allowed;">No Image</button>`;
+
+        return `
+          <tr>
+            <td><strong>${entry.vehicleNumber}</strong></td>
+            <td>${entry.userId ? entry.userId.name : 'Unknown'}</td>
+            <td>${entry.projectName || '-'}</td>
+            <td>${entry.unloadingPointName || '-'}</td>
+            <td>${entry.netWeight ? entry.netWeight.toFixed(2) + ' kg' : '-'}</td>
+            <td>${formatDateTime(entry.timestamp)}</td>
+            <td>
+              <div class="action-buttons">
+                ${viewImageBtn}
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    updatePaginationUI('completed-trips', completedTripsPage, total, completedTripsPageSize, hasMore);
+  } catch (error) {
+    console.error('Failed to load completed trips:', error);
+  }
+}
+
+function viewImage(filename, vehicleNumber, projectName, unloadingPointName) {
+  const imageUrl = `/api/images/unloading-point/${filename}`;
+  document.getElementById('modal-image').src = imageUrl;
+  document.getElementById('image-vehicle').textContent = vehicleNumber;
+  document.getElementById('image-project').textContent = projectName || '-';
+  document.getElementById('image-unloading-point').textContent = unloadingPointName || '-';
+
+  // Set up download button with proper filename
+  const downloadBtn = document.getElementById('download-image-btn');
+  downloadBtn.href = imageUrl;
+  downloadBtn.download = `${vehicleNumber}_${filename}`;
+
+  document.getElementById('image-modal-title').textContent = `Image - ${vehicleNumber}`;
+  showModal('image-modal');
+}
+
 // Suspicious Entries
 function getSuspiciousTypeBadge(entryType) {
   if (entryType === 'missing_loading') {
@@ -913,6 +986,36 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('next-suspicious-page').addEventListener('click', () => {
     suspiciousPage++;
     loadSuspiciousEntries();
+  });
+
+  // Completed Trips
+  document.getElementById('refresh-completed-trips-btn').addEventListener('click', () => {
+    completedTripsPage = 0;
+    loadCompletedTrips();
+  });
+
+  document.getElementById('search-completed-trips-btn').addEventListener('click', () => {
+    completedTripsPage = 0;
+    loadCompletedTrips(document.getElementById('completed-trips-search').value);
+  });
+
+  document.getElementById('completed-trips-search').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      completedTripsPage = 0;
+      loadCompletedTrips(document.getElementById('completed-trips-search').value);
+    }
+  });
+
+  document.getElementById('prev-completed-trips-page').addEventListener('click', () => {
+    if (completedTripsPage > 0) {
+      completedTripsPage--;
+      loadCompletedTrips(document.getElementById('completed-trips-search').value);
+    }
+  });
+
+  document.getElementById('next-completed-trips-page').addEventListener('click', () => {
+    completedTripsPage++;
+    loadCompletedTrips(document.getElementById('completed-trips-search').value);
   });
 
   // Modal close buttons

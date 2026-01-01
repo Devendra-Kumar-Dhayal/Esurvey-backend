@@ -42,6 +42,7 @@
         <ul class="nav-menu">
           <li><a href="#" class="nav-link active" data-section="dashboard">Dashboard</a></li>
           <li><a href="#" class="nav-link" data-section="open-trips">Open Trips</a></li>
+          <li><a href="#" class="nav-link" data-section="completed-trips">Completed Trips</a></li>
           <li><a href="#" class="nav-link" data-section="suspicious-entries">Suspicious Entries</a></li>
           <li><a href="#" class="nav-link" data-section="users">Users</a></li>
           <li><a href="#" class="nav-link" data-section="roles">Roles</a></li>
@@ -123,6 +124,52 @@
               <button id="prev-trips-page" class="btn btn-secondary" disabled>Previous</button>
               <span id="trips-page-info">Page 1</span>
               <button id="next-trips-page" class="btn btn-secondary">Next</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Completed Trips Section -->
+        <section id="completed-trips-section" class="section hidden">
+          <h2>Completed Trips</h2>
+          <p class="section-description">View completed trips with unloading point data and images.</p>
+          <div class="stats-grid" style="margin-bottom: 20px;">
+            <div class="stat-card">
+              <h3>Total Completed</h3>
+              <p id="stat-completed-total" class="stat-value">-</p>
+            </div>
+            <div class="stat-card">
+              <h3>With Images</h3>
+              <p id="stat-with-images" class="stat-value">-</p>
+            </div>
+            <div class="stat-card">
+              <h3>Without Images</h3>
+              <p id="stat-without-images" class="stat-value">-</p>
+            </div>
+          </div>
+          <div class="search-bar">
+            <input type="text" id="completed-trips-search" placeholder="Search by vehicle, project, or unloading point...">
+            <button id="search-completed-trips-btn" class="btn btn-primary">Search</button>
+            <button id="refresh-completed-trips-btn" class="btn btn-secondary">Refresh</button>
+          </div>
+          <div class="card">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Vehicle</th>
+                  <th>User</th>
+                  <th>Project</th>
+                  <th>Unloading Point</th>
+                  <th>Net Weight</th>
+                  <th>Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="completed-trips-table"></tbody>
+            </table>
+            <div class="pagination">
+              <button id="prev-completed-trips-page" class="btn btn-secondary" disabled>Previous</button>
+              <span id="completed-trips-page-info">Page 1</span>
+              <button id="next-completed-trips-page" class="btn btn-secondary">Next</button>
             </div>
           </div>
         </section>
@@ -430,6 +477,28 @@
           <button type="button" class="btn btn-secondary modal-close">Cancel</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Image View Modal -->
+  <div id="image-modal" class="modal hidden">
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <h3 id="image-modal-title">View Image</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="image-container">
+        <img id="modal-image" src="" alt="Unloading Point Image" style="max-width: 100%; max-height: 70vh; object-fit: contain;">
+      </div>
+      <div class="image-details" style="padding: 10px 0;">
+        <p><strong>Vehicle:</strong> <span id="image-vehicle"></span></p>
+        <p><strong>Project:</strong> <span id="image-project"></span></p>
+        <p><strong>Unloading Point:</strong> <span id="image-unloading-point"></span></p>
+      </div>
+      <div class="form-actions">
+        <a id="download-image-btn" href="#" download class="btn btn-primary">Download Image</a>
+        <button type="button" class="btn btn-secondary modal-close">Close</button>
+      </div>
     </div>
   </div>
 

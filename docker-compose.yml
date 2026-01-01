@@ -10,6 +10,8 @@ services:
       - MONGODB_URI=mongodb://mongo:27017/background-tracker
       - JWT_SECRET=your-super-secret-jwt-key-change-in-production
       - JWT_EXPIRES_IN=7d
+    volumes:
+      - images-data:/app/images
     depends_on:
       mongo:
         condition: service_healthy
@@ -36,6 +38,7 @@ services:
 
 volumes:
   mongo-data:
+  images-data:
 
 networks:
   tracker-network:

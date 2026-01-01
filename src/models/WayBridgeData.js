@@ -76,6 +76,10 @@ const wayBridgeDataSchema = new mongoose.Schema(
       type: Number,
       min: 0,
     },
+    notes: {
+      type: String,
+      trim: true,
+    },
     timestamp: {
       type: Date,
       default: Date.now,

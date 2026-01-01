@@ -73,6 +73,10 @@ const unloadingPointDataSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    imagePath: {
+      type: String,
+      trim: true,
+    },
     timestamp: {
       type: Date,
       default: Date.now,

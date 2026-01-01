@@ -112,7 +112,7 @@ const loadingPointDataValidation = [
 ];
 
 const unloadingPointDataValidation = [
-  body('tripId').isMongoId().withMessage('Valid trip ID is required'),
+  body('tripId').optional().isMongoId().withMessage('Valid trip ID is required if provided'),
   body('vehicleNumber').trim().notEmpty().withMessage('Vehicle number is required'),
   body('unloadingPointId').isMongoId().withMessage('Valid unloading point is required'),
   body('projectId').isMongoId().withMessage('Valid project is required'),

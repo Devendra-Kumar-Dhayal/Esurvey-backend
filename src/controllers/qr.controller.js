@@ -556,8 +556,14 @@ const saveWayBridgeData = async (req, res) => {
       grossWeight,
       tareWeight,
       previousTripReason,
+      notes,
     } = req.body;
     const userId = req.user._id;
+
+    console.log('[saveWayBridgeData] Request body:', {
+      vehicleNumber,
+      previousTripReason: previousTripReason || '(not provided)',
+    });
 
     // Check for active trip and end it if exists
     const existingTrip = await Trip.findOne({
@@ -565,14 +571,19 @@ const saveWayBridgeData = async (req, res) => {
       status: 'active',
     });
 
+    console.log('[saveWayBridgeData] Existing trip:', existingTrip ? existingTrip._id : 'none');
+
     let endedPreviousTrip = null;
     if (existingTrip) {
       if (!previousTripReason || previousTripReason.trim() === '') {
+        console.log('[saveWayBridgeData] ERROR: Active trip found but no previousTripReason provided');
         return sendError(res, 'Reason for ending previous trip is required', 400);
       }
 
+      console.log('[saveWayBridgeData] Creating MissingUnloadingPointEntry with reason:', previousTripReason);
+
       // Log as missing unloading point entry
-      await MissingUnloadingPointEntry.create({
+      const missingEntry = await MissingUnloadingPointEntry.create({
         userId,
         tripId: existingTrip._id,
         vehicleNumber: vehicleNumber.toUpperCase(),
@@ -585,6 +596,8 @@ const saveWayBridgeData = async (req, res) => {
         tripEndTime: new Date(),
         reason: previousTripReason,
       });
+
+      console.log('[saveWayBridgeData] MissingUnloadingPointEntry created:', missingEntry._id);
 
       // End the previous trip
       existingTrip.status = 'cancelled';
@@ -677,6 +690,7 @@ const saveWayBridgeData = async (req, res) => {
       weighBridgeSlipNo,
       grossWeight,
       tareWeight,
+      notes,
     });
 
     sendSuccess(
@@ -743,20 +757,30 @@ const saveLoadingPointData = async (req, res) => {
     } = req.body;
     const userId = req.user._id;
 
+    console.log('[saveLoadingPointData] Request body:', {
+      vehicleNumber,
+      previousTripReason: previousTripReason || '(not provided)',
+    });
+
     // Check for active trip and end it if exists
     const existingTrip = await Trip.findOne({
       vehicleNumber: vehicleNumber.toUpperCase(),
       status: 'active',
     });
 
+    console.log('[saveLoadingPointData] Existing trip:', existingTrip ? existingTrip._id : 'none');
+
     let endedPreviousTrip = null;
     if (existingTrip) {
       if (!previousTripReason || previousTripReason.trim() === '') {
+        console.log('[saveLoadingPointData] ERROR: Active trip found but no previousTripReason provided');
         return sendError(res, 'Reason for ending previous trip is required', 400);
       }
 
+      console.log('[saveLoadingPointData] Creating MissingUnloadingPointEntry with reason:', previousTripReason);
+
       // Log as missing unloading point entry
-      await MissingUnloadingPointEntry.create({
+      const missingEntry = await MissingUnloadingPointEntry.create({
         userId,
         tripId: existingTrip._id,
         vehicleNumber: vehicleNumber.toUpperCase(),
@@ -769,6 +793,8 @@ const saveLoadingPointData = async (req, res) => {
         tripEndTime: new Date(),
         reason: previousTripReason,
       });
+
+      console.log('[saveLoadingPointData] MissingUnloadingPointEntry created:', missingEntry._id);
 
       // End the previous trip
       existingTrip.status = 'cancelled';
@@ -1028,16 +1054,16 @@ const saveUnloadingPointData = async (req, res) => {
     } = req.body;
     const userId = req.user._id;
 
-    // Validate trip exists and is active
-    const trip = await Trip.findOne({
-      _id: tripId,
-      status: 'active',
+    // Debug logging
+    console.log('saveUnloadingPointData request:', {
+      tripId,
+      vehicleNumber,
+      unloadingPointId,
+      projectId,
+      userId: userId.toString(),
     });
-    if (!trip) {
-      return sendError(res, 'Trip not found or already closed', 400);
-    }
 
-    // Validate unloading point
+    // Validate unloading point first
     const unloadingPoint = await DropdownOption.findOne({
       _id: unloadingPointId,
       type: 'unloading_point',
@@ -1057,10 +1083,40 @@ const saveUnloadingPointData = async (req, res) => {
       return sendError(res, 'Invalid project', 400);
     }
 
-    // Create unloading point data entry
+    // Check if trip exists and is active
+    let trip = null;
+    let hasMissingLoadingPoint = false;
+
+    if (tripId) {
+      trip = await Trip.findOne({
+        _id: tripId,
+        status: 'active',
+      });
+    }
+
+    // If no valid trip, log as missing loading point entry
+    if (!trip) {
+      console.log('[saveUnloadingPointData] No active trip found, logging MissingLoadingPointEntry');
+
+      await MissingLoadingPointEntry.create({
+        userId,
+        vehicleNumber: vehicleNumber.toUpperCase(),
+        qrCode,
+        unloadingPointId,
+        unloadingPointName: unloadingPoint.name,
+        projectId,
+        projectName: project.name,
+        reason: 'No active trip found when attempting to unload',
+      });
+
+      hasMissingLoadingPoint = true;
+      console.log('[saveUnloadingPointData] MissingLoadingPointEntry created for vehicle:', vehicleNumber);
+    }
+
+    // Create unloading point data entry (with or without trip reference)
     const unloadingPointData = await UnloadingPointData.create({
       userId,
-      tripId,
+      tripId: trip ? trip._id : null,
       qrCode,
       vehicleNumber: vehicleNumber.toUpperCase(),
       wayBridgeSlipNo,
@@ -1077,15 +1133,19 @@ const saveUnloadingPointData = async (req, res) => {
       notes,
     });
 
-    // Close the trip
-    trip.status = 'completed';
-    trip.endTime = new Date();
-    await trip.save();
+    // Close the trip if it exists
+    if (trip) {
+      trip.status = 'completed';
+      trip.endTime = new Date();
+      await trip.save();
+    }
 
     sendSuccess(
       res,
-      { unloadingPointData, trip },
-      'Unloading point data saved and trip completed successfully',
+      { unloadingPointData, trip, hasMissingLoadingPoint },
+      hasMissingLoadingPoint
+        ? 'Unloading point data saved (logged as missing loading point entry)'
+        : 'Unloading point data saved and trip completed successfully',
       201
     );
   } catch (error) {
@@ -1147,7 +1207,15 @@ const logMissingLoadingPoint = async (req, res) => {
       reason,
     } = req.body;
 
+    console.log('[logMissingLoadingPoint] Request received:', {
+      vehicleNumber,
+      unloadingPointName,
+      projectName,
+      reason,
+    });
+
     if (!vehicleNumber) {
+      console.log('[logMissingLoadingPoint] ERROR: Vehicle number is required');
       return sendError(res, 'Vehicle number is required', 400);
     }
 
@@ -1162,9 +1230,11 @@ const logMissingLoadingPoint = async (req, res) => {
       reason: reason || 'Loading point entry missing',
     });
 
+    console.log('[logMissingLoadingPoint] Entry created:', entry._id);
+
     sendSuccess(res, { entry }, 'Missing loading point entry logged', 201);
   } catch (error) {
-    console.error('Log missing loading point error:', error);
+    console.error('[logMissingLoadingPoint] ERROR:', error);
     sendError(res, 'Failed to log missing loading point entry', 500);
   }
 };
