@@ -1,0 +1,67 @@
+# Production Docker Compose Configuration
+# Usage: docker compose -f docker-compose.prod.yml up -d
+# Domain: http://app.globalseatrans.com/
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: esurvey-api-prod
+    ports:
+      - "80:3000"
+    env_file:
+      - .env.production
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - MONGODB_URI=mongodb://mongo:27017/esurvey-prod
+    volumes:
+      - images-data:/app/images
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: always
+    networks:
+      - esurvey-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  mongo:
+    image: mongo:7
+    container_name: esurvey-mongo-prod
+    volumes:
+      - mongo-data-prod:/data/db
+      - mongo-config-prod:/data/configdb
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: always
+    networks:
+      - esurvey-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # MongoDB is not exposed to host in production for security
+    # Access via internal network only
+
+volumes:
+  mongo-data-prod:
+    name: esurvey-mongo-data-prod
+  mongo-config-prod:
+    name: esurvey-mongo-config-prod
+  images-data:
+    name: esurvey-images-prod
+
+networks:
+  esurvey-network:
+    name: esurvey-network-prod
+    driver: bridge

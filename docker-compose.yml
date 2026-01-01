@@ -1,14 +1,18 @@
+# Development Docker Compose Configuration
+# Usage: docker compose up -d
+# For production: docker compose -f docker-compose.prod.yml up -d
+
 services:
   api:
     build: .
-    container_name: tracker-api
+    container_name: esurvey-api-dev
     ports:
       - "3001:3000"
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
       - PORT=3000
-      - MONGODB_URI=mongodb://mongo:27017/background-tracker
-      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      - MONGODB_URI=mongodb://mongo:27017/esurvey-dev
+      - JWT_SECRET=dev-jwt-secret-not-for-production
       - JWT_EXPIRES_IN=7d
     volumes:
       - images-data:/app/images
@@ -17,11 +21,11 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - tracker-network
+      - esurvey-network
 
   mongo:
     image: mongo:7
-    container_name: tracker-mongo
+    container_name: esurvey-mongo-dev
     ports:
       - "27018:27017"
     volumes:
@@ -34,12 +38,12 @@ services:
       start_period: 10s
     restart: unless-stopped
     networks:
-      - tracker-network
+      - esurvey-network
 
 volumes:
   mongo-data:
   images-data:
 
 networks:
-  tracker-network:
+  esurvey-network:
     driver: bridge
